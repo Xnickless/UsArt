@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const TATTOO_STYLES = [
@@ -125,6 +125,157 @@ const REGISTER_CITIES = [
 ];
 const ALL_CATEGORIES = [...new Set(ARTISTS.flatMap((a) => a.categories))].sort();
 
+// ─── i18n (PL / EN) ─────────────────────────────────────────────────────────────
+const I18N = {
+  pl: {
+    nav_search: "Szukaj", nav_explore: "Odkrywaj", login: "Zaloguj się", join: "Dołącz jako artysta",
+    hero_a: "Znajdź", hero_b: "artystę",
+    hero_sub: "Wpisz nick, miasto lub styl — albo użyj filtrów poniżej.",
+    search_ph: "np. kraków, fine line, @zuza...",
+    f_city: "Miasto", f_cat: "Kategoria", f_style: "Styl", all: "Wszystkie",
+    st_artists: "Artystów", st_projects: "Projektów",
+    no_results: "Brak wyników", no_results_sub: "Zmień filtry lub wyszukiwaną frazę.",
+    works: "prac",
+    explore_title: "Odkrywaj", explore_sub: "Przeglądaj artystów według miasta lub dziedziny.",
+    cities: "Miasta", cities_count: "{n} miast", categories: "Kategorie",
+    artists_count: "{n} artystów",
+    no_artists: "Brak artystów", try_filters: "Spróbuj zmienić filtry.",
+    back: "Wróć", projects_n: "Projekty ({n})",
+    step_account: "Konto", step_profile: "Profil", step_photos: "Zdjęcia", step_payment: "Płatność",
+    create_account: "Utwórz konto", create_account_sub: "Podstawowe dane do logowania i kontaktu.",
+    l_nick: "Nick artystyczny *", ph_nick: "np. marta.ink", hint_nick: "Twój unikalny identyfikator w UsArt",
+    l_name: "Imię i nazwisko", ph_optional: "Opcjonalnie", l_email: "E-mail *", ph_email: "twoj@email.pl",
+    l_ig: "Instagram", ph_ig: "@nick (bez małpy)",
+    profile_title: "Twój profil artystyczny", profile_sub: "Te informacje zobaczą osoby szukające artystów.",
+    l_city: "Miasto *", l_cat: "Kategoria *", l_style: "Styl *", chosen: "Wybrano:",
+    l_bio: "Bio / Opis", ph_bio: "Kilka słów o Tobie i Twojej twórczości...",
+    photos_title: "Dodaj swoje prace", photos_sub: "Wgraj zdjęcia projektów — minimum 2, maksimum 12.",
+    upload_click: "Kliknij, aby dodać zdjęcia", upload_hint: "PNG, JPG, WEBP · maks. 10 MB każde",
+    photos_added: "{n} zdjęć dodanych",
+    back_btn: "Wstecz", next_btn: "Dalej →",
+    choose_plan: "Wybierz plan", plan_sub: "Pierwsze {m} miesiące za darmo. Studio? Każda kolejna osoba 5 zł taniej.",
+    plan_solo: "Artysta solo", per_mo: "/mies.", plan_solo_desc: "Jedna osoba, własny profil",
+    plan_studio: "Studio", plan_from: "od", plan_badge: "Taniej za osobę",
+    plan_studio_desc: "Wielu artystów pod jednym kontem",
+    members_label: "Liczba artystów w studiu",
+    bd_first: "1. artysta", bd_each: "Każdy kolejny (−5 zł / os.) × {n}",
+    savings: "Oszczędzasz {amt} miesięcznie względem {n} kont solo",
+    plan_card_studio: "Studio · {n} artystów", plan_card_solo: "Artysta solo",
+    free_for: "przez {m} mies.", then_amt: "Następnie {amt} / miesiąc",
+    feat_trial: "{m} pierwsze miesiące całkowicie za darmo",
+    feat_studio: "{n} profili artystów pod marką studia — każdy 5 zł taniej",
+    feat_solo: "Własny profil widoczny w wyszukiwarce i sekcji Odkrywaj",
+    feat_gallery: "Nielimitowana galeria prac", feat_contact: "Bezpośredni kontakt: Instagram i e-mail",
+    feat_cancel: "Anuluj w dowolnym momencie",
+    card_name: "Imię na karcie *", ph_card_name: "Jan Kowalski", card_number: "Numer karty *",
+    card_exp: "Ważna do *", ph_exp: "MM / RR", card_cvc: "CVC *",
+    pay_today: "Do zapłaty dziś",
+    pay_note: "Dziś nie pobieramy żadnej opłaty. Po {m} miesiącach pobierzemy {amt}/mies., chyba że anulujesz wcześniej.",
+    start_trial: "Rozpocznij {m} miesiące za darmo ✓",
+    success_title: "Profil gotowy!",
+    success_sub: "Okres próbny aktywny — {m} miesiące za darmo, potem {amt}/mies.{studio}.",
+    success_studio: " (studio, {n} artystów)",
+    success_line2: "Za chwilę pojawisz się w wynikach wyszukiwania.",
+    go_home: "Wróć na stronę główną", see_profile: "Zobacz swój profil",
+  },
+  en: {
+    nav_search: "Search", nav_explore: "Explore", login: "Log in", join: "Join as artist",
+    hero_a: "Find an", hero_b: "artist",
+    hero_sub: "Enter a nickname, city or style — or use the filters below.",
+    search_ph: "e.g. krakow, fine line, @zuza...",
+    f_city: "City", f_cat: "Category", f_style: "Style", all: "All",
+    st_artists: "Artists", st_projects: "Projects",
+    no_results: "No results", no_results_sub: "Change the filters or search term.",
+    works: "works",
+    explore_title: "Explore", explore_sub: "Browse artists by city or field.",
+    cities: "Cities", cities_count: "{n} cities", categories: "Categories",
+    artists_count: "{n} artists",
+    no_artists: "No artists", try_filters: "Try changing the filters.",
+    back: "Back", projects_n: "Projects ({n})",
+    step_account: "Account", step_profile: "Profile", step_photos: "Photos", step_payment: "Payment",
+    create_account: "Create account", create_account_sub: "Basic details for login and contact.",
+    l_nick: "Artist nickname *", ph_nick: "e.g. marta.ink", hint_nick: "Your unique identifier on UsArt",
+    l_name: "Full name", ph_optional: "Optional", l_email: "Email *", ph_email: "you@email.com",
+    l_ig: "Instagram", ph_ig: "@handle (without @)",
+    profile_title: "Your artist profile", profile_sub: "This information is shown to people searching for artists.",
+    l_city: "City *", l_cat: "Category *", l_style: "Style *", chosen: "Selected:",
+    l_bio: "Bio / Description", ph_bio: "A few words about you and your work...",
+    photos_title: "Add your work", photos_sub: "Upload project photos — minimum 2, maximum 12.",
+    upload_click: "Click to add photos", upload_hint: "PNG, JPG, WEBP · max 10 MB each",
+    photos_added: "{n} photos added",
+    back_btn: "Back", next_btn: "Next →",
+    choose_plan: "Choose a plan", plan_sub: "First {m} months free. A studio? Each extra person 5 zł cheaper.",
+    plan_solo: "Solo artist", per_mo: "/mo", plan_solo_desc: "One person, own profile",
+    plan_studio: "Studio", plan_from: "from", plan_badge: "Cheaper per person",
+    plan_studio_desc: "Multiple artists under one account",
+    members_label: "Number of artists in the studio",
+    bd_first: "1st artist", bd_each: "Each extra (−5 zł / person) × {n}",
+    savings: "You save {amt} per month vs {n} solo accounts",
+    plan_card_studio: "Studio · {n} artists", plan_card_solo: "Solo artist",
+    free_for: "for {m} mo", then_amt: "Then {amt} / month",
+    feat_trial: "First {m} months completely free",
+    feat_studio: "{n} artist profiles under the studio brand — each 5 zł cheaper",
+    feat_solo: "Your own profile visible in search and Explore",
+    feat_gallery: "Unlimited work gallery", feat_contact: "Direct contact: Instagram and email",
+    feat_cancel: "Cancel anytime",
+    card_name: "Name on card *", ph_card_name: "John Smith", card_number: "Card number *",
+    card_exp: "Expiry *", ph_exp: "MM / YY", card_cvc: "CVC *",
+    pay_today: "Due today",
+    pay_note: "No charge today. After {m} months we'll charge {amt}/mo unless you cancel earlier.",
+    start_trial: "Start {m} months free ✓",
+    success_title: "Profile ready!",
+    success_sub: "Trial active — {m} months free, then {amt}/mo{studio}.",
+    success_studio: " (studio, {n} artists)",
+    success_line2: "You'll appear in search results shortly.",
+    go_home: "Back to home", see_profile: "View your profile",
+  },
+};
+
+const CATEGORY_EN = {
+  "Tatuaż": "Tattoo", "Malarstwo": "Painting", "Ilustracja": "Illustration",
+  "Fotografia": "Photography", "Grafika": "Graphic Design",
+};
+const STYLE_EN = {
+  "Akwarela": "Watercolor", "Olej": "Oil", "Akryl": "Acrylic", "Gwasz": "Gouache",
+  "Abstrakcja": "Abstract", "Realizm": "Realism", "Komiks": "Comic", "Botanika": "Botanical",
+  "Portret": "Portrait", "Street": "Street", "Analog": "Analog", "Krajobraz": "Landscape",
+  "Architektura": "Architecture", "Plakat": "Poster", "Typografia": "Typography",
+};
+const BIO_EN = {
+  "Specjalizuję się w tatuażach blackwork i geometrycznych. 7+ lat doświadczenia w Krakowie.":
+    "I specialize in blackwork and geometric tattoos. 7+ years of experience in Kraków.",
+  "Fine line i watercolor tattoo. Piszcie przez Instagram aby umówić sesję.":
+    "Fine line and watercolor tattoo. DM me on Instagram to book a session.",
+  "Trash polka, neo-traditional i realistyczne portrety. Studio na Kazimierzu.":
+    "Trash polka, neo-traditional and realistic portraits. Studio in Kazimierz.",
+  "Malarz i ilustrator. Tworzę głównie akwarele i oleje inspirowane naturą i architekturą.":
+    "Painter and illustrator. I mostly create watercolors and oils inspired by nature and architecture.",
+  "Digital artist i grafik. Projekty dla marek, plakaty, komiks autorski.":
+    "Digital artist and graphic designer. Brand work, posters, original comics.",
+  "Fotografia portretowa i uliczna. Ciemnia analogowa, filmy 35mm.":
+    "Portrait and street photography. Analog darkroom, 35mm film.",
+  "Japanese i old school — kolory, linie, klasyka. Piszcie śmiało.":
+    "Japanese and old school — color, lines, the classics. Feel free to reach out.",
+  "Dotwork i geometria. Każdy projekt tworzony indywidualnie.":
+    "Dotwork and geometry. Every design made individually.",
+};
+const TITLE_EN = {
+  "Geometria na ramieniu": "Geometry on the arm", "Mandala plecy": "Back mandala",
+  "Blackwork łydka": "Blackwork calf", "Fine line kwiat": "Fine line flower",
+  "Neo-trad sowa": "Neo-trad owl", "Portret realistyczny": "Realistic portrait",
+  "Tatry o świcie": "The Tatras at dawn", "Stare Miasto Kraków": "Kraków Old Town",
+  "Portret w akwareli": "Watercolor portrait", "Plakat koncertowy": "Concert poster",
+  "Okładka albumu": "Album cover", "Komiks Strona 1": "Comic Page 1",
+  "Praga nocą": "Praga at night",
+};
+
+const LangContext = createContext({ lang: "pl", setLang: () => {}, t: (k) => k });
+const useLang = () => useContext(LangContext);
+const tCat = (c, lang) => (lang === "en" ? CATEGORY_EN[c] || c : c);
+const tStyle = (s, lang) => (lang === "en" ? STYLE_EN[s] || s : s);
+const tBio = (a, lang) => (lang === "en" ? BIO_EN[a.bio] || a.bio : a.bio);
+const tTitle = (p, lang) => (lang === "en" ? TITLE_EN[p.title] || p.title : p.title);
+
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Ico = ({ d, size = 18, fill = false }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={fill ? "currentColor" : "none"}
@@ -171,7 +322,13 @@ const css = `
     display: flex; align-items: center; gap: 6px; }
   .nav-tab:hover { color: #ccc; background: #1a1a1a; }
   .nav-tab.active { color: #fff; background: #1e1e1e; }
-  .nav-right { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+  .nav-right { display: flex; gap: 8px; flex: 1; justify-content: flex-end; align-items: center; }
+  .lang-switch { display: flex; gap: 2px; background: #141414; border: 1px solid #252525;
+    border-radius: 8px; padding: 2px; }
+  .lang-switch button { border: none; background: transparent; color: #666; cursor: pointer;
+    font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 6px; transition: all .15s; }
+  .lang-switch button:hover { color: #ccc; }
+  .lang-switch button.active { background: #1e1e1e; color: #fff; }
   .btn { padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px;
     font-weight: 500; transition: all .15s; }
   .btn-ghost { background: transparent; color: #777; border: 1px solid #272727; }
@@ -373,6 +530,40 @@ const css = `
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .plan-price small { font-size: 13px; color: #666; -webkit-text-fill-color: #666; font-weight: 500; }
   .plan-after { font-size: 12px; color: #777; margin-top: 4px; }
+  /* Wybór planu Solo / Studio */
+  .plan-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .plan-opt { position: relative; text-align: left; padding: 16px; border-radius: 14px; cursor: pointer;
+    background: #0d0d0d; border: 1px solid #222; color: #ccc; transition: all .15s; }
+  .plan-opt:hover { border-color: #383838; }
+  .plan-opt.selected { border-color: #818cf8; background: rgba(129,140,248,.07);
+    box-shadow: 0 0 0 1px #818cf8 inset; }
+  .plan-opt-name { font-size: 14px; font-weight: 600; color: #eee; }
+  .plan-opt-price { font-size: 20px; font-weight: 700; margin-top: 4px; color: #fff; }
+  .plan-opt-price small { font-size: 12px; color: #666; font-weight: 500; }
+  .plan-opt-desc { font-size: 11px; color: #666; margin-top: 5px; }
+  .plan-badge { position: absolute; top: 10px; right: 10px; font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .4px; padding: 3px 7px; border-radius: 20px;
+    background: linear-gradient(135deg, #e879f9, #818cf8); color: #fff; }
+  /* Licznik osób + rozbicie ceny */
+  .members-box { background: #0d0d0d; border: 1px solid #222; border-radius: 14px;
+    padding: 16px; margin-bottom: 16px; }
+  .members-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .members-label { font-size: 13px; font-weight: 600; color: #ccc; }
+  .stepper { display: flex; align-items: center; gap: 4px; background: #161616;
+    border: 1px solid #262626; border-radius: 10px; padding: 3px; }
+  .step-btn { width: 30px; height: 30px; border-radius: 8px; border: none; background: #1f1f1f;
+    color: #ddd; font-size: 18px; cursor: pointer; transition: all .15s; }
+  .step-btn:hover:not(:disabled) { background: #818cf8; color: #fff; }
+  .step-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .step-count { min-width: 34px; text-align: center; font-size: 15px; font-weight: 700; color: #fff; }
+  .price-breakdown { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1c1c1c;
+    display: flex; flex-direction: column; gap: 7px; }
+  .bd-line { display: flex; justify-content: space-between; font-size: 13px; color: #aaa; }
+  .bd-line em { color: #e879f9; font-style: normal; font-size: 11px; }
+  .savings-badge { display: flex; align-items: center; gap: 7px; margin-top: 14px;
+    padding: 9px 12px; border-radius: 10px; font-size: 12px; font-weight: 500;
+    background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.25); color: #4ade80; }
+  .savings-badge svg { flex-shrink: 0; }
   .plan-feats { list-style: none; margin-top: 16px; display: flex; flex-direction: column; gap: 9px; }
   .plan-feats li { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #aaa; }
   .plan-feats li svg { color: #818cf8; flex-shrink: 0; }
@@ -403,20 +594,30 @@ const css = `
 `;
 
 // ─── REGISTER FLOW ─────────────────────────────────────────────────────────────
-const STEPS = ["Konto", "Profil", "Zdjęcia", "Płatność"];
-const SUB_PRICE = "49,99 zł";
+const STEPS = ["step_account", "step_profile", "step_photos", "step_payment"];
 const TRIAL_MONTHS = 2;
+const BASE_PRICE = 49.99;     // pierwszy artysta
+const EXTRA_PRICE = 45.00;    // każdy kolejny artysta ze studia (5 zł taniej)
+const MAX_MEMBERS = 10;
+const zl = (n) => n.toFixed(2).replace(".", ",") + " zł";
 
 function RegisterFlow({ onBack, onDone }) {
+  const { lang, t } = useLang();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     nick: "", name: "", email: "", instagram: "", city: "",
     category: "", bio: "", styles: [], photos: [],
     cardName: "", cardNumber: "", cardExp: "", cardCvc: "",
+    plan: "solo", members: 3,
   });
   const [done, setDone] = useState(false);
 
+  const memberCount = form.plan === "studio" ? form.members : 1;
+  const monthlyTotal = BASE_PRICE + (memberCount - 1) * EXTRA_PRICE;
+  const monthlySavings = (memberCount - 1) * (BASE_PRICE - EXTRA_PRICE);
+
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const setMembers = (n) => update("members", Math.max(2, Math.min(MAX_MEMBERS, n)));
   const toggleStyle = (s) => update("styles",
     form.styles.includes(s) ? form.styles.filter((x) => x !== s) : [...form.styles, s]);
 
@@ -438,12 +639,16 @@ function RegisterFlow({ onBack, onDone }) {
       <div className="reg-card">
         <div className="success-state">
           <div className="success-icon"><IconCheck /></div>
-          <h2>Profil gotowy!</h2>
-          <p>Okres próbny aktywny — {TRIAL_MONTHS} miesiące za darmo, potem {SUB_PRICE}/mies.<br />
-          Za chwilę pojawisz się w wynikach wyszukiwania.</p>
+          <h2>{t("success_title")}</h2>
+          <p>{t("success_sub", {
+            m: TRIAL_MONTHS,
+            amt: zl(monthlyTotal),
+            studio: form.plan === "studio" ? t("success_studio", { n: memberCount }) : "",
+          })}<br />
+          {t("success_line2")}</p>
           <div style={{ marginTop: 28, display: "flex", gap: 10, justifyContent: "center" }}>
-            <button className="btn btn-ghost" onClick={onBack}>Wróć na stronę główną</button>
-            <button className="btn btn-primary" onClick={onDone}>Zobacz swój profil</button>
+            <button className="btn btn-ghost" onClick={onBack}>{t("go_home")}</button>
+            <button className="btn btn-primary" onClick={onDone}>{t("see_profile")}</button>
           </div>
         </div>
       </div>
@@ -452,7 +657,7 @@ function RegisterFlow({ onBack, onDone }) {
 
   return (
     <div className="register">
-      <button className="register-back" onClick={onBack}><IconBack /> Wróć</button>
+      <button className="register-back" onClick={onBack}><IconBack /> {t("back")}</button>
 
       {/* Steps */}
       <div style={{ marginBottom: 28 }}>
@@ -463,7 +668,7 @@ function RegisterFlow({ onBack, onDone }) {
                 <div className={`step-dot ${i < step ? "done" : i === step ? "active" : ""}`}>
                   {i < step ? <IconCheck /> : i + 1}
                 </div>
-                <div className="step-label">{s}</div>
+                <div className="step-label">{t(s)}</div>
               </div>
               {i < STEPS.length - 1 && <div className={`step-line ${i < step ? "done" : ""}`} />}
             </div>
@@ -474,27 +679,27 @@ function RegisterFlow({ onBack, onDone }) {
       <div className="reg-card">
         {step === 0 && (
           <>
-            <h2>Utwórz konto</h2>
-            <p>Podstawowe dane do logowania i kontaktu.</p>
+            <h2>{t("create_account")}</h2>
+            <p>{t("create_account_sub")}</p>
             <div className="form-row">
-              <label className="form-label">Nick artystyczny *</label>
-              <input className="form-input" placeholder="np. marta.ink" value={form.nick}
+              <label className="form-label">{t("l_nick")}</label>
+              <input className="form-input" placeholder={t("ph_nick")} value={form.nick}
                 onChange={e => update("nick", e.target.value)} />
-              <div className="form-hint">Twój unikalny identyfikator w UsArt</div>
+              <div className="form-hint">{t("hint_nick")}</div>
             </div>
             <div className="form-row">
-              <label className="form-label">Imię i nazwisko</label>
-              <input className="form-input" placeholder="Opcjonalnie" value={form.name}
+              <label className="form-label">{t("l_name")}</label>
+              <input className="form-input" placeholder={t("ph_optional")} value={form.name}
                 onChange={e => update("name", e.target.value)} />
             </div>
             <div className="form-row">
-              <label className="form-label">E-mail *</label>
-              <input className="form-input" type="email" placeholder="twoj@email.pl" value={form.email}
+              <label className="form-label">{t("l_email")}</label>
+              <input className="form-input" type="email" placeholder={t("ph_email")} value={form.email}
                 onChange={e => update("email", e.target.value)} />
             </div>
             <div className="form-row">
-              <label className="form-label">Instagram</label>
-              <input className="form-input" placeholder="@nick (bez małpy)" value={form.instagram}
+              <label className="form-label">{t("l_ig")}</label>
+              <input className="form-input" placeholder={t("ph_ig")} value={form.instagram}
                 onChange={e => update("instagram", e.target.value)} />
             </div>
           </>
@@ -502,12 +707,12 @@ function RegisterFlow({ onBack, onDone }) {
 
         {step === 1 && (
           <>
-            <h2>Twój profil artystyczny</h2>
-            <p>Te informacje zobaczą osoby szukające artystów.</p>
+            <h2>{t("profile_title")}</h2>
+            <p>{t("profile_sub")}</p>
 
             {/* MIASTO — chipsy */}
             <div className="form-row">
-              <label className="form-label">Miasto *</label>
+              <label className="form-label">{t("l_city")}</label>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                 {REGISTER_CITIES.map(c => (
                   <button key={c} onClick={() => update("city", c)}
@@ -521,13 +726,13 @@ function RegisterFlow({ onBack, onDone }) {
 
             {/* KATEGORIA */}
             <div className="form-row">
-              <label className="form-label">Kategoria *</label>
+              <label className="form-label">{t("l_cat")}</label>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {ALL_CATEGORIES.map(c => (
                   <button key={c} onClick={() => { update("category", c); update("styles", []); }}
                     className={`chip ${form.category === c ? "active" : ""}`}
                     style={{ fontSize: 13 }}>
-                    {c}
+                    {tCat(c, lang)}
                   </button>
                 ))}
               </div>
@@ -536,19 +741,19 @@ function RegisterFlow({ onBack, onDone }) {
             {/* STYLE — pojawiają się po wyborze kategorii */}
             {availableStyles.length > 0 && (
               <div className="form-row">
-                <label className="form-label">Styl *</label>
+                <label className="form-label">{t("l_style")}</label>
                 <div className="style-picker">
                   {availableStyles.map(s => (
                     <button key={s} className={`style-pick-btn ${form.styles.includes(s) ? "selected" : ""}`}
                       onClick={() => toggleStyle(s)}>
                       {form.styles.includes(s) && <IconCheck />}
-                      {s}
+                      {tStyle(s, lang)}
                     </button>
                   ))}
                 </div>
                 {form.styles.length > 0 && (
                   <div style={{ marginTop: 8, color: "#555", fontSize: 11 }}>
-                    Wybrano: {form.styles.join(", ")}
+                    {t("chosen")} {form.styles.map(s => tStyle(s, lang)).join(", ")}
                   </div>
                 )}
               </div>
@@ -556,8 +761,8 @@ function RegisterFlow({ onBack, onDone }) {
 
             {/* BIO */}
             <div className="form-row">
-              <label className="form-label">Bio / Opis</label>
-              <textarea className="form-input" rows={3} placeholder="Kilka słów o Tobie i Twojej twórczości..."
+              <label className="form-label">{t("l_bio")}</label>
+              <textarea className="form-input" rows={3} placeholder={t("ph_bio")}
                 value={form.bio} onChange={e => update("bio", e.target.value)}
                 style={{ resize: "vertical" }} />
             </div>
@@ -566,13 +771,13 @@ function RegisterFlow({ onBack, onDone }) {
 
         {step === 2 && (
           <>
-            <h2>Dodaj swoje prace</h2>
-            <p>Wgraj zdjęcia projektów — minimum 2, maksimum 12.</p>
+            <h2>{t("photos_title")}</h2>
+            <p>{t("photos_sub")}</p>
             {form.photos.length === 0 ? (
               <div className="upload-zone" onClick={addDemoPhotos}>
                 <IconUpload />
-                <p>Kliknij, aby dodać zdjęcia</p>
-                <span>PNG, JPG, WEBP · maks. 10 MB każde</span>
+                <p>{t("upload_click")}</p>
+                <span>{t("upload_hint")}</span>
               </div>
             ) : (
               <>
@@ -591,7 +796,7 @@ function RegisterFlow({ onBack, onDone }) {
                   )}
                 </div>
                 <div style={{ marginTop: 10, color: "#444", fontSize: 11 }}>
-                  {form.photos.length} zdjęć dodanych
+                  {t("photos_added", { n: form.photos.length })}
                 </div>
               </>
             )}
@@ -600,66 +805,109 @@ function RegisterFlow({ onBack, onDone }) {
 
         {step === 3 && (
           <>
-            <h2>Subskrypcja artysty</h2>
-            <p>Pierwsze {TRIAL_MONTHS} miesiące za darmo. Potem {SUB_PRICE} miesięcznie — anuluj kiedy chcesz.</p>
+            <h2>{t("choose_plan")}</h2>
+            <p>{t("plan_sub", { m: TRIAL_MONTHS })}</p>
+
+            {/* Wybór planu: Solo / Studio */}
+            <div className="plan-toggle">
+              <button type="button" onClick={() => update("plan", "solo")}
+                className={`plan-opt ${form.plan === "solo" ? "selected" : ""}`}>
+                <div className="plan-opt-name">{t("plan_solo")}</div>
+                <div className="plan-opt-price">{zl(BASE_PRICE)}<small>{t("per_mo")}</small></div>
+                <div className="plan-opt-desc">{t("plan_solo_desc")}</div>
+              </button>
+              <button type="button" onClick={() => update("plan", "studio")}
+                className={`plan-opt ${form.plan === "studio" ? "selected" : ""}`}>
+                <span className="plan-badge">{t("plan_badge")}</span>
+                <div className="plan-opt-name">{t("plan_studio")}</div>
+                <div className="plan-opt-price">{t("plan_from")} {zl(BASE_PRICE + EXTRA_PRICE)}<small>{t("per_mo")}</small></div>
+                <div className="plan-opt-desc">{t("plan_studio_desc")}</div>
+              </button>
+            </div>
+
+            {/* Licznik osób + rozbicie ceny (tylko studio) */}
+            {form.plan === "studio" && (
+              <div className="members-box">
+                <div className="members-row">
+                  <span className="members-label">{t("members_label")}</span>
+                  <div className="stepper">
+                    <button type="button" className="step-btn" onClick={() => setMembers(form.members - 1)}
+                      disabled={form.members <= 2}>−</button>
+                    <span className="step-count">{form.members}</span>
+                    <button type="button" className="step-btn" onClick={() => setMembers(form.members + 1)}
+                      disabled={form.members >= MAX_MEMBERS}>+</button>
+                  </div>
+                </div>
+                <div className="price-breakdown">
+                  <div className="bd-line"><span>{t("bd_first")}</span><span>{zl(BASE_PRICE)}</span></div>
+                  <div className="bd-line"><span>{t("bd_each", { n: memberCount - 1 })}</span>
+                    <span>{zl((memberCount - 1) * EXTRA_PRICE)}</span></div>
+                </div>
+                <div className="savings-badge">
+                  <IconCheck /> {t("savings", { amt: zl(monthlySavings), n: memberCount })}
+                </div>
+              </div>
+            )}
 
             <div className="plan-card">
               <div className="plan-top">
-                <span className="plan-name">UsArt Artysta</span>
-                <span className="plan-price">0 zł<small> przez {TRIAL_MONTHS} mies.</small></span>
+                <span className="plan-name">{form.plan === "studio" ? t("plan_card_studio", { n: memberCount }) : t("plan_card_solo")}</span>
+                <span className="plan-price">0 zł<small> {t("free_for", { m: TRIAL_MONTHS })}</small></span>
               </div>
-              <div className="plan-after">Następnie {SUB_PRICE} / miesiąc</div>
+              <div className="plan-after">{t("then_amt", { amt: zl(monthlyTotal) })}</div>
               <ul className="plan-feats">
-                <li><IconCheck /> {TRIAL_MONTHS} pierwsze miesiące całkowicie za darmo</li>
-                <li><IconCheck /> Profil widoczny w wyszukiwarce i sekcji Odkrywaj</li>
-                <li><IconCheck /> Nielimitowana galeria prac</li>
-                <li><IconCheck /> Bezpośredni kontakt: Instagram i e-mail</li>
-                <li><IconCheck /> Anuluj w dowolnym momencie</li>
+                <li><IconCheck /> {t("feat_trial", { m: TRIAL_MONTHS })}</li>
+                {form.plan === "studio"
+                  ? <li><IconCheck /> {t("feat_studio", { n: memberCount })}</li>
+                  : <li><IconCheck /> {t("feat_solo")}</li>}
+                <li><IconCheck /> {t("feat_gallery")}</li>
+                <li><IconCheck /> {t("feat_contact")}</li>
+                <li><IconCheck /> {t("feat_cancel")}</li>
               </ul>
             </div>
 
             <div className="form-row">
-              <label className="form-label">Imię na karcie *</label>
-              <input className="form-input" placeholder="Jan Kowalski" value={form.cardName}
+              <label className="form-label">{t("card_name")}</label>
+              <input className="form-input" placeholder={t("ph_card_name")} value={form.cardName}
                 onChange={e => update("cardName", e.target.value)} />
             </div>
             <div className="form-row">
-              <label className="form-label">Numer karty *</label>
+              <label className="form-label">{t("card_number")}</label>
               <input className="form-input" placeholder="0000 0000 0000 0000" inputMode="numeric" value={form.cardNumber}
                 onChange={e => update("cardNumber", e.target.value)} />
             </div>
             <div className="pay-grid">
               <div className="form-row">
-                <label className="form-label">Ważna do *</label>
-                <input className="form-input" placeholder="MM / RR" value={form.cardExp}
+                <label className="form-label">{t("card_exp")}</label>
+                <input className="form-input" placeholder={t("ph_exp")} value={form.cardExp}
                   onChange={e => update("cardExp", e.target.value)} />
               </div>
               <div className="form-row">
-                <label className="form-label">CVC *</label>
+                <label className="form-label">{t("card_cvc")}</label>
                 <input className="form-input" placeholder="123" inputMode="numeric" value={form.cardCvc}
                   onChange={e => update("cardCvc", e.target.value)} />
               </div>
             </div>
 
             <div className="pay-total">
-              <span>Do zapłaty dziś</span>
+              <span>{t("pay_today")}</span>
               <b>0,00 zł</b>
             </div>
             <div className="pay-note">
-              <IconLock /> Dziś nie pobieramy żadnej opłaty. Po {TRIAL_MONTHS} miesiącach pobierzemy {SUB_PRICE}/mies., chyba że anulujesz wcześniej.
+              <IconLock /> {t("pay_note", { m: TRIAL_MONTHS, amt: zl(monthlyTotal) })}
             </div>
           </>
         )}
 
         <div className="form-actions">
           {step > 0 && (
-            <button className="btn btn-ghost" onClick={() => setStep(s => s - 1)}>Wstecz</button>
+            <button className="btn btn-ghost" onClick={() => setStep(s => s - 1)}>{t("back_btn")}</button>
           )}
           {step < STEPS.length - 1 ? (
-            <button className="btn btn-primary" onClick={() => setStep(s => s + 1)}>Dalej →</button>
+            <button className="btn btn-primary" onClick={() => setStep(s => s + 1)}>{t("next_btn")}</button>
           ) : (
             <button className="btn btn-primary" onClick={() => setDone(true)}>
-              Rozpocznij {TRIAL_MONTHS} miesiące za darmo ✓
+              {t("start_trial", { m: TRIAL_MONTHS })}
             </button>
           )}
         </div>
@@ -670,6 +918,7 @@ function RegisterFlow({ onBack, onDone }) {
 
 // ─── EXPLORE PAGE ──────────────────────────────────────────────────────────────
 function ExplorePage({ onArtist }) {
+  const { lang, t } = useLang();
   const [exploreCity, setExploreCity] = useState(null);
   const [exploreCat, setExploreCat] = useState(null);
   const [exploreStyle, setExploreStyle] = useState(null);
@@ -701,19 +950,19 @@ function ExplorePage({ onArtist }) {
     <div className="explore">
       {!hasFilter ? (
         <>
-          <div className="explore-title">Odkrywaj</div>
-          <div className="explore-sub">Przeglądaj artystów według miasta lub dziedziny.</div>
+          <div className="explore-title">{t("explore_title")}</div>
+          <div className="explore-sub">{t("explore_sub")}</div>
 
           <div className="explore-section">
             <div className="section-header">
-              <span className="section-title">Miasta</span>
-              <span className="section-count">{ALL_CITIES.length} miast</span>
+              <span className="section-title">{t("cities")}</span>
+              <span className="section-count">{t("cities_count", { n: ALL_CITIES.length })}</span>
             </div>
             <div className="city-grid">
               {cityStats.map(({ city, count }) => (
                 <div className="city-card" key={city} onClick={() => setExploreCity(city)}>
                   <div className="city-card-name">{city}</div>
-                  <div className="city-card-count">{count} artystów</div>
+                  <div className="city-card-count">{t("artists_count", { n: count })}</div>
                 </div>
               ))}
             </div>
@@ -721,13 +970,13 @@ function ExplorePage({ onArtist }) {
 
           <div className="explore-section">
             <div className="section-header">
-              <span className="section-title">Kategorie</span>
+              <span className="section-title">{t("categories")}</span>
             </div>
             <div className="cat-grid">
               {catStats.map(({ cat, count }) => (
                 <div className="cat-card" key={cat} onClick={() => setExploreCat(cat)}>
-                  <div className="cat-card-name">{cat}</div>
-                  <div className="cat-card-count">{count} artystów</div>
+                  <div className="cat-card-name">{tCat(cat, lang)}</div>
+                  <div className="cat-card-count">{t("artists_count", { n: count })}</div>
                 </div>
               ))}
             </div>
@@ -738,23 +987,23 @@ function ExplorePage({ onArtist }) {
           <div className="results-header">
             <div className="results-breadcrumb">
               <span className="bc-item" onClick={() => { setExploreCity(null); setExploreCat(null); setExploreStyle(null); }}>
-                Odkrywaj
+                {t("explore_title")}
               </span>
               {exploreCity && (<><span className="bc-sep">/</span><span className="bc-current" style={{ cursor: "pointer" }}
                 onClick={() => { setExploreCat(null); setExploreStyle(null); }}>{exploreCity}</span></>)}
-              {exploreCat && (<><span className="bc-sep">/</span><span className="bc-current">{exploreCat}</span></>)}
-              {exploreStyle && (<><span className="bc-sep">/</span><span className="bc-current">{exploreStyle}</span></>)}
+              {exploreCat && (<><span className="bc-sep">/</span><span className="bc-current">{tCat(exploreCat, lang)}</span></>)}
+              {exploreStyle && (<><span className="bc-sep">/</span><span className="bc-current">{tStyle(exploreStyle, lang)}</span></>)}
             </div>
-            <span className="results-count">{filteredArtists.length} artystów</span>
+            <span className="results-count">{t("artists_count", { n: filteredArtists.length })}</span>
           </div>
 
           {/* Category chips if only city selected */}
           {exploreCity && !exploreCat && (
             <div className="filter-row" style={{ marginBottom: 20 }}>
-              <span className="filter-label">Kategoria</span>
+              <span className="filter-label">{t("f_cat")}</span>
               {ALL_CATEGORIES.map(c => (
                 <button key={c} className={`chip ${exploreCat === c ? "active" : ""}`}
-                  onClick={() => setExploreCat(c)}>{c}</button>
+                  onClick={() => setExploreCat(c)}>{tCat(c, lang)}</button>
               ))}
             </div>
           )}
@@ -762,10 +1011,10 @@ function ExplorePage({ onArtist }) {
           {/* Style chips */}
           {availableStyles.length > 0 && (
             <div className="filter-row" style={{ marginBottom: 20 }}>
-              <span className="filter-label">Styl</span>
+              <span className="filter-label">{t("f_style")}</span>
               {availableStyles.map(s => (
                 <button key={s} className={`chip chip-style ${exploreStyle === s ? "active" : ""}`}
-                  onClick={() => setExploreStyle(exploreStyle === s ? null : s)}>{s}</button>
+                  onClick={() => setExploreStyle(exploreStyle === s ? null : s)}>{tStyle(s, lang)}</button>
               ))}
             </div>
           )}
@@ -773,7 +1022,7 @@ function ExplorePage({ onArtist }) {
           {/* City chips if only category selected */}
           {exploreCat && !exploreCity && (
             <div className="filter-row" style={{ marginBottom: 20 }}>
-              <span className="filter-label">Miasto</span>
+              <span className="filter-label">{t("f_city")}</span>
               {ALL_CITIES.map(c => (
                 <button key={c} className={`chip ${exploreCity === c ? "active" : ""}`}
                   onClick={() => setExploreCity(exploreCity === c ? null : c)}>{c}</button>
@@ -784,8 +1033,8 @@ function ExplorePage({ onArtist }) {
           <div className="grid" style={{ padding: 0 }}>
             {filteredArtists.length === 0 ? (
               <div className="empty">
-                <h3>Brak artystów</h3>
-                <p>Spróbuj zmienić filtry.</p>
+                <h3>{t("no_artists")}</h3>
+                <p>{t("try_filters")}</p>
               </div>
             ) : (
               filteredArtists.map(a => <ArtistCard key={a.id} artist={a} onClick={() => onArtist(a)} />)
@@ -799,11 +1048,12 @@ function ExplorePage({ onArtist }) {
 
 // ─── ARTIST CARD ───────────────────────────────────────────────────────────────
 function ArtistCard({ artist: a, onClick }) {
+  const { lang, t } = useLang();
   return (
     <div className="artist-card" onClick={onClick}>
       <div className="card-thumb">
         <img src={a.projects[0]?.img} alt="" />
-        <span className="card-count">{a.projects.length} prac</span>
+        <span className="card-count">{a.projects.length} {t("works")}</span>
       </div>
       <div className="card-body">
         <div className="card-header">
@@ -814,7 +1064,7 @@ function ArtistCard({ artist: a, onClick }) {
           </div>
         </div>
         <div className="card-styles">
-          {a.styles.slice(0, 3).map(s => <span className="style-tag" key={s}>{s}</span>)}
+          {a.styles.slice(0, 3).map(s => <span className="style-tag" key={s}>{tStyle(s, lang)}</span>)}
           {a.styles.length > 3 && <span className="style-tag">+{a.styles.length - 3}</span>}
         </div>
       </div>
@@ -824,18 +1074,19 @@ function ArtistCard({ artist: a, onClick }) {
 
 // ─── ARTIST PROFILE ────────────────────────────────────────────────────────────
 function ArtistProfile({ artist: a, onBack }) {
+  const { lang, t } = useLang();
   const [lightbox, setLightbox] = useState(null);
   return (
     <>
       <div className="profile">
-        <button className="profile-back" onClick={onBack}><IconBack /> Wróć</button>
+        <button className="profile-back" onClick={onBack}><IconBack /> {t("back")}</button>
         <div className="profile-card">
           <img className="profile-avatar" src={a.avatar} alt={a.nick} />
           <div style={{ flex: 1 }}>
             <div className="profile-name">@{a.nick}</div>
             {a.name && <div className="profile-nick">{a.name}</div>}
             <div className="profile-city"><IconPin /> {a.city}</div>
-            <p className="profile-bio">{a.bio}</p>
+            <p className="profile-bio">{tBio(a, lang)}</p>
             <div className="contact-row">
               {a.instagram && (
                 <a className="contact-btn contact-ig"
@@ -850,16 +1101,16 @@ function ArtistProfile({ artist: a, onBack }) {
               )}
             </div>
             <div className="style-badges">
-              {a.styles.map(s => <span className="style-badge" key={s}>{s}</span>)}
+              {a.styles.map(s => <span className="style-badge" key={s}>{tStyle(s, lang)}</span>)}
             </div>
           </div>
         </div>
-        <div className="proj-title">Projekty ({a.projects.length})</div>
+        <div className="proj-title">{t("projects_n", { n: a.projects.length })}</div>
         <div className="proj-grid">
           {a.projects.map(p => (
             <div className="proj-item" key={p.id} onClick={() => setLightbox(p)}>
-              <img src={p.img} alt={p.title} />
-              <div className="proj-overlay"><span className="proj-name">{p.title}</span></div>
+              <img src={p.img} alt={tTitle(p, lang)} />
+              <div className="proj-overlay"><span className="proj-name">{tTitle(p, lang)}</span></div>
             </div>
           ))}
         </div>
@@ -867,8 +1118,8 @@ function ArtistProfile({ artist: a, onBack }) {
       {lightbox && (
         <div className="lightbox" onClick={() => setLightbox(null)}>
           <button className="lightbox-close" onClick={() => setLightbox(null)}><IconX /></button>
-          <img src={lightbox.img} alt={lightbox.title} onClick={e => e.stopPropagation()} />
-          <div className="lightbox-caption">{lightbox.title}</div>
+          <img src={lightbox.img} alt={tTitle(lightbox, lang)} onClick={e => e.stopPropagation()} />
+          <div className="lightbox-caption">{tTitle(lightbox, lang)}</div>
         </div>
       )}
     </>
@@ -877,6 +1128,7 @@ function ArtistProfile({ artist: a, onBack }) {
 
 // ─── SEARCH PAGE ───────────────────────────────────────────────────────────────
 function SearchPage({ onArtist }) {
+  const { lang, t } = useLang();
   const [q, setQ] = useState("");
   const [cityF, setCityF] = useState("Wszystkie");
   const [catF, setCatF] = useState("Wszystkie");
@@ -901,11 +1153,11 @@ function SearchPage({ onArtist }) {
   return (
     <>
       <div className="hero" style={{ paddingTop: 56 }}>
-        <h1>Znajdź <span>artystę</span></h1>
-        <p>Wpisz nick, miasto lub styl — albo użyj filtrów poniżej.</p>
+        <h1>{t("hero_a")} <span>{t("hero_b")}</span></h1>
+        <p>{t("hero_sub")}</p>
         <div className="search-wrap">
           <span className="search-icon"><IconSearch /></span>
-          <input className="search-input" placeholder="np. kraków, fine line, @zuza..."
+          <input className="search-input" placeholder={t("search_ph")}
             value={q} onChange={e => setQ(e.target.value)} />
           {q && <button className="search-clear" onClick={() => setQ("")}><IconX /></button>}
         </div>
@@ -913,25 +1165,25 @@ function SearchPage({ onArtist }) {
 
       <div className="filters-panel">
         <div className="filter-row">
-          <span className="filter-label">Miasto</span>
+          <span className="filter-label">{t("f_city")}</span>
           {["Wszystkie", ...ALL_CITIES].map(c => (
             <button key={c} className={`chip ${cityF === c ? "active" : ""}`}
-              onClick={() => setCityF(c)}>{c}</button>
+              onClick={() => setCityF(c)}>{c === "Wszystkie" ? t("all") : c}</button>
           ))}
         </div>
         <div className="filter-row">
-          <span className="filter-label">Kategoria</span>
+          <span className="filter-label">{t("f_cat")}</span>
           {["Wszystkie", ...ALL_CATEGORIES].map(c => (
             <button key={c} className={`chip ${catF === c ? "active" : ""}`}
-              onClick={() => { setCatF(c); setStyleF("Wszystkie"); }}>{c}</button>
+              onClick={() => { setCatF(c); setStyleF("Wszystkie"); }}>{c === "Wszystkie" ? t("all") : tCat(c, lang)}</button>
           ))}
         </div>
         {availableStyles.length > 1 && (
           <div className="filter-row">
-            <span className="filter-label">Styl</span>
+            <span className="filter-label">{t("f_style")}</span>
             {availableStyles.map(s => (
               <button key={s} className={`chip chip-style ${styleF === s ? "active" : ""}`}
-                onClick={() => setStyleF(s)}>{s}</button>
+                onClick={() => setStyleF(s)}>{s === "Wszystkie" ? t("all") : tStyle(s, lang)}</button>
             ))}
           </div>
         )}
@@ -939,8 +1191,8 @@ function SearchPage({ onArtist }) {
 
       <div className="stats">
         {[
-          { num: filtered.length, label: "Artystów" },
-          { num: filtered.flatMap(a => a.projects).length, label: "Projektów" },
+          { num: filtered.length, label: t("st_artists") },
+          { num: filtered.flatMap(a => a.projects).length, label: t("st_projects") },
         ].map(s => (
           <div key={s.label}>
             <div className="stat-num">{s.num}</div>
@@ -952,8 +1204,8 @@ function SearchPage({ onArtist }) {
       <div className="grid">
         {filtered.length === 0 ? (
           <div className="empty">
-            <h3>Brak wyników</h3>
-            <p>Zmień filtry lub wyszukiwaną frazę.</p>
+            <h3>{t("no_results")}</h3>
+            <p>{t("no_results_sub")}</p>
           </div>
         ) : (
           filtered.map(a => <ArtistCard key={a.id} artist={a} onClick={() => onArtist(a)} />)
@@ -968,12 +1220,25 @@ export default function App() {
   const [tab, setTab] = useState("search");           // "search" | "explore" | "register"
   const [profileArtist, setProfileArtist] = useState(null);
   const [prevTab, setPrevTab] = useState("search");
+  const [lang, setLangState] = useState(() => {
+    try { return localStorage.getItem("usart_lang") || "pl"; } catch { return "pl"; }
+  });
+  const setLang = (l) => {
+    setLangState(l);
+    try { localStorage.setItem("usart_lang", l); } catch {}
+  };
+
+  const t = (key, vars) => {
+    let s = (I18N[lang] && I18N[lang][key]) ?? key;
+    if (vars) for (const k in vars) s = s.split(`{${k}}`).join(vars[k]);
+    return s;
+  };
 
   const openArtist = (a) => { setPrevTab(tab); setProfileArtist(a); };
   const closeArtist = () => setProfileArtist(null);
 
   return (
-    <>
+    <LangContext.Provider value={{ lang, setLang, t }}>
       <style>{css}</style>
       <div className="app">
         <nav className="nav">
@@ -983,19 +1248,23 @@ export default function App() {
           <div className="nav-tabs">
             <button className={`nav-tab ${tab === "search" && !profileArtist ? "active" : ""}`}
               onClick={() => { setProfileArtist(null); setTab("search"); }}>
-              <IconSearch /> Szukaj
+              <IconSearch /> {t("nav_search")}
             </button>
             <button className={`nav-tab ${tab === "explore" && !profileArtist ? "active" : ""}`}
               onClick={() => { setProfileArtist(null); setTab("explore"); }}>
-              <IconCompass /> Odkrywaj
+              <IconCompass /> {t("nav_explore")}
             </button>
           </div>
           <div className="nav-right">
+            <div className="lang-switch">
+              <button className={lang === "pl" ? "active" : ""} onClick={() => setLang("pl")}>PL</button>
+              <button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>EN</button>
+            </div>
             <button className="btn btn-ghost" onClick={() => { setProfileArtist(null); setTab("search"); }}>
-              Zaloguj się
+              {t("login")}
             </button>
             <button className="btn btn-primary" onClick={() => { setProfileArtist(null); setTab("register"); }}>
-              <IconUser style={{ display: "inline", marginRight: 4 }} /> Dołącz jako artysta
+              <IconUser style={{ display: "inline", marginRight: 4 }} /> {t("join")}
             </button>
           </div>
         </nav>
@@ -1013,6 +1282,6 @@ export default function App() {
           />
         ) : null}
       </div>
-    </>
+    </LangContext.Provider>
   );
 }
