@@ -1,4 +1,5 @@
-import { useState, createContext, useContext } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { supabase } from "./supabase";
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 const TATTOO_STYLES = [
@@ -132,12 +133,24 @@ const REGISTER_CITIES = [
   "Przemyśl", "Stalowa Wola", "Tomaszów Mazowiecki", "Sopot",
   "Zakopane", "Świnoujście",
 ];
-const ALL_CATEGORIES = [...new Set(ARTISTS.flatMap((a) => a.categories))].sort();
+const ALL_CATEGORIES = ["Fotografia", "Grafika", "Ilustracja", "Malarstwo", "Tatuaż"];
+
+// Zamienia wiersz z bazy (artysta + prace) na kształt używany w aplikacji
+const fromDb = (a) => ({
+  ...a,
+  categories: a.category ? [a.category] : [],
+  styles: a.styles || [],
+  avatar: a.avatar || a.projects?.[0]?.img || "https://i.pravatar.cc/150?img=12",
+  projects: (a.projects || []).map((p) => ({ ...p, title: p.title || "" })),
+});
 
 // ─── i18n (PL / EN) ─────────────────────────────────────────────────────────────
 const I18N = {
   pl: {
     nav_search: "Szukaj", nav_explore: "Odkrywaj", login: "Zaloguj się", join: "Dołącz jako artysta",
+    logout: "Wyloguj", login_title: "Zaloguj się", login_btn: "Zaloguj",
+    login_error: "Błędny e-mail lub hasło.", submitting: "Tworzę konto...",
+    err_taken: "Ten nick lub e-mail jest już zajęty.",
     hero_a: "Znajdź", hero_b: "artystę",
     hero_sub: "Wpisz nick, miasto lub styl — albo użyj filtrów poniżej.",
     search_ph: "np. kraków, fine line, @zuza...",
@@ -154,7 +167,12 @@ const I18N = {
     create_account: "Utwórz konto", create_account_sub: "Podstawowe dane do logowania i kontaktu.",
     l_nick: "Nick artystyczny *", ph_nick: "np. marta.ink", hint_nick: "Twój unikalny identyfikator w UsArt",
     l_name: "Imię i nazwisko", ph_optional: "Opcjonalnie", l_email: "E-mail *", ph_email: "twoj@email.pl",
-    l_password: "Hasło *", ph_password: "min. 6 znaków",
+    l_password: "Hasło *", ph_password: "Wpisz hasło", l_password2: "Powtórz hasło *",
+    ph_password2: "Wpisz hasło ponownie",
+    pw_intro: "Hasło musi zawierać:",
+    pw_len: "minimum 8 znaków", pw_lower: "jedną małą literę",
+    pw_upper: "jedną wielką literę", pw_special: "jeden znak specjalny",
+    pw_match_ok: "Hasła są zgodne", pw_match_bad: "Hasła nie są takie same",
     l_ig: "Instagram", ph_ig: "@nick (bez małpy)",
     fill_required: "Uzupełnij wymagane pola oznaczone *",
     profile_title: "Twój profil artystyczny", profile_sub: "Te informacje zobaczą osoby szukające artystów.",
@@ -192,6 +210,9 @@ const I18N = {
   },
   en: {
     nav_search: "Search", nav_explore: "Explore", login: "Log in", join: "Join as artist",
+    logout: "Log out", login_title: "Log in", login_btn: "Log in",
+    login_error: "Wrong email or password.", submitting: "Creating account...",
+    err_taken: "This nickname or email is already taken.",
     hero_a: "Find an", hero_b: "artist",
     hero_sub: "Enter a nickname, city or style — or use the filters below.",
     search_ph: "e.g. krakow, fine line, @zuza...",
@@ -208,7 +229,12 @@ const I18N = {
     create_account: "Create account", create_account_sub: "Basic details for login and contact.",
     l_nick: "Artist nickname *", ph_nick: "e.g. marta.ink", hint_nick: "Your unique identifier on UsArt",
     l_name: "Full name", ph_optional: "Optional", l_email: "Email *", ph_email: "you@email.com",
-    l_password: "Password *", ph_password: "min. 6 characters",
+    l_password: "Password *", ph_password: "Enter password", l_password2: "Repeat password *",
+    ph_password2: "Enter password again",
+    pw_intro: "Password must contain:",
+    pw_len: "at least 8 characters", pw_lower: "one lowercase letter",
+    pw_upper: "one uppercase letter", pw_special: "one special character",
+    pw_match_ok: "Passwords match", pw_match_bad: "Passwords don't match",
     l_ig: "Instagram", ph_ig: "@handle (without @)",
     fill_required: "Fill in the required fields marked *",
     profile_title: "Your artist profile", profile_sub: "This information is shown to people searching for artists.",
@@ -353,6 +379,22 @@ const css = `
   .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .btn:disabled:hover { opacity: .4; transform: none; }
   .form-warning { font-size: 12px; color: #f0a868; margin-top: 18px; text-align: right; }
+  .form-error { font-size: 13px; color: #f87171; margin-top: 14px; padding: 10px 12px;
+    background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.25); border-radius: 10px; }
+
+  /* ── LOGIN MODAL ── */
+  .modal-overlay { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal { width: 100%; max-width: 380px; background: #111; border: 1px solid #1f1f1f;
+    border-radius: 18px; padding: 26px; position: relative; }
+  .modal h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .modal p { color: #666; font-size: 13px; margin-bottom: 20px; }
+  .modal-close { position: absolute; top: 14px; right: 14px; background: #1a1a1a; border: none;
+    color: #888; cursor: pointer; border-radius: 8px; padding: 6px; display: flex; }
+  .modal .btn-primary { width: 100%; margin-top: 6px; padding: 11px; }
+  .nav-user { display: flex; align-items: center; gap: 8px; }
+  .nav-email { font-size: 12px; color: #888; max-width: 150px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
 
   /* ── HERO ── */
   .hero { padding: 72px 28px 48px; text-align: center; max-width: 680px; margin: 0 auto; }
@@ -516,6 +558,17 @@ const css = `
   .form-input:focus { border-color: #818cf8; }
   .form-input::placeholder { color: #333; }
   .form-hint { font-size: 11px; color: #444; margin-top: 5px; }
+  .pw-intro { font-size: 12px; color: #777; margin-bottom: 8px; }
+  .pw-rules { list-style: none; margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
+  .pw-rules li { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #666;
+    transition: color .15s; }
+  .pw-dot { width: 9px; height: 9px; border-radius: 50%; background: #2c2c2c; flex-shrink: 0;
+    transition: background .15s, box-shadow .15s; }
+  .pw-rules li.ok { color: #4ade80; }
+  .pw-rules li.ok .pw-dot { background: #4ade80; box-shadow: 0 0 7px rgba(74,222,128,.6); }
+  .pw-match { font-size: 12px; margin-top: 6px; }
+  .pw-match.ok { color: #4ade80; }
+  .pw-match.bad { color: #f87171; }
   .upload-zone { border: 2px dashed #252525; border-radius: 12px; padding: 36px 24px;
     text-align: center; cursor: pointer; transition: all .2s; color: #444; }
   .upload-zone:hover { border-color: #818cf8; color: #818cf8; background: rgba(129,140,248,.04); }
@@ -623,15 +676,24 @@ function RegisterFlow({ onBack, onDone }) {
   const { lang, t } = useLang();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
-    nick: "", name: "", email: "", password: "", instagram: "", city: "",
+    nick: "", name: "", email: "", password: "", password2: "", instagram: "", city: "",
     category: "", bio: "", styles: [], photos: [],
     cardName: "", cardNumber: "", cardExp: "", cardCvc: "",
     plan: "solo", members: 3,
   });
   const [done, setDone] = useState(false);
 
+  const pwRules = {
+    len: form.password.length >= 8,
+    lower: /[a-z]/.test(form.password),
+    upper: /[A-Z]/.test(form.password),
+    special: /[^A-Za-z0-9]/.test(form.password),
+  };
+  const pwValid = pwRules.len && pwRules.lower && pwRules.upper && pwRules.special;
+  const pwMatch = form.password.length > 0 && form.password === form.password2;
+
   const stepValid = (s) => {
-    if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && form.password.length >= 6;
+    if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && pwMatch;
     if (s === 1) return form.city.trim() && form.category && form.styles.length > 0;
     if (s === 2) return form.photos.length >= 2;
     if (s === 3) return form.cardName.trim() && form.cardNumber.trim() && form.cardExp.trim() && form.cardCvc.trim();
@@ -651,14 +713,61 @@ function RegisterFlow({ onBack, onDone }) {
     ? TATTOO_STYLES
     : OTHER_STYLES[form.category] || [];
 
-  const DEMO_PHOTOS = [
-    "https://picsum.photos/seed/up1/300/300",
-    "https://picsum.photos/seed/up2/300/300",
-    "https://picsum.photos/seed/up3/300/300",
-    "https://picsum.photos/seed/up4/300/300",
-  ];
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const addDemoPhotos = () => update("photos", DEMO_PHOTOS);
+  const onPickFiles = (e) => {
+    const files = Array.from(e.target.files || []);
+    update("photos", [...form.photos, ...files].slice(0, 12));
+    e.target.value = "";
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true); setError("");
+    try {
+      // Krok 1 - Konto (e-mail + hasło)
+      const { data: auth, error: authErr } = await supabase.auth.signUp({
+        email: form.email, password: form.password,
+      });
+      if (authErr) throw authErr;
+      const uid = auth.user?.id;
+      if (!auth.session) throw new Error("no_session");
+
+      // Krok 2 - Zdjęcia do magazynu
+      const urls = [];
+      for (const file of form.photos) {
+        const path = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const { error: upErr } = await supabase.storage.from("portfolios").upload(path, file);
+        if (upErr) throw upErr;
+        urls.push(supabase.storage.from("portfolios").getPublicUrl(path).data.publicUrl);
+      }
+
+      // Krok 3 - Profil artysty
+      const { error: insErr } = await supabase.from("artists").insert({
+        id: uid, nick: form.nick, name: form.name || null, city: form.city,
+        category: form.category, styles: form.styles, bio: form.bio || null,
+        instagram: form.instagram || null, email: form.email,
+        avatar: urls[0] || null, plan: form.plan, members: memberCount,
+      });
+      if (insErr) throw insErr;
+
+      // Krok 4 - Prace
+      if (urls.length) {
+        await supabase.from("projects").insert(
+          urls.map((img, i) => ({ artist_id: uid, title: `${form.nick} #${i + 1}`, img }))
+        );
+      }
+      setDone(true);
+    } catch (e) {
+      if (e.message === "no_session")
+        setError("Wyłącz potwierdzanie e-mail w Supabase (Authentication → Sign In / Providers → Email).");
+      else if (e.code === "23505" || /duplicate|unique/i.test(e.message || ""))
+        setError(t("err_taken"));
+      else setError(e.message || "Coś poszło nie tak.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (done) return (
     <div className="register">
@@ -725,8 +834,25 @@ function RegisterFlow({ onBack, onDone }) {
             </div>
             <div className="form-row">
               <label className="form-label">{t("l_password")}</label>
+              <div className="pw-intro">{t("pw_intro")}</div>
+              <ul className="pw-rules">
+                <li className={pwRules.len ? "ok" : ""}><span className="pw-dot" /> {t("pw_len")}</li>
+                <li className={pwRules.lower ? "ok" : ""}><span className="pw-dot" /> {t("pw_lower")}</li>
+                <li className={pwRules.upper ? "ok" : ""}><span className="pw-dot" /> {t("pw_upper")}</li>
+                <li className={pwRules.special ? "ok" : ""}><span className="pw-dot" /> {t("pw_special")}</li>
+              </ul>
               <input className="form-input" type="password" placeholder={t("ph_password")} value={form.password}
                 onChange={e => update("password", e.target.value)} />
+            </div>
+            <div className="form-row">
+              <label className="form-label">{t("l_password2")}</label>
+              <input className="form-input" type="password" placeholder={t("ph_password2")} value={form.password2}
+                onChange={e => update("password2", e.target.value)} />
+              {form.password2.length > 0 && (
+                <div className={`pw-match ${pwMatch ? "ok" : "bad"}`}>
+                  {pwMatch ? t("pw_match_ok") : t("pw_match_bad")}
+                </div>
+              )}
             </div>
             <div className="form-row">
               <label className="form-label">{t("l_ig")}</label>
@@ -807,25 +933,27 @@ function RegisterFlow({ onBack, onDone }) {
             <h2>{t("photos_title")}</h2>
             <p>{t("photos_sub")}</p>
             {form.photos.length === 0 ? (
-              <div className="upload-zone" onClick={addDemoPhotos}>
+              <label className="upload-zone">
+                <input type="file" accept="image/*" multiple hidden onChange={onPickFiles} />
                 <IconUpload />
                 <p>{t("upload_click")}</p>
                 <span>{t("upload_hint")}</span>
-              </div>
+              </label>
             ) : (
               <>
                 <div className="upload-previews">
                   {form.photos.map((src, i) => (
                     <div className="upload-preview" key={i}>
-                      <img src={src} alt={`preview ${i}`} />
+                      <img src={URL.createObjectURL(src)} alt={`preview ${i}`} />
                     </div>
                   ))}
                   {form.photos.length < 12 && (
-                    <div className="upload-zone" style={{ aspectRatio: "1", padding: 0,
+                    <label className="upload-zone" style={{ aspectRatio: "1", padding: 0,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      borderRadius: 8 }} onClick={addDemoPhotos}>
+                      borderRadius: 8 }}>
+                      <input type="file" accept="image/*" multiple hidden onChange={onPickFiles} />
                       <span style={{ fontSize: 24, color: "#333" }}>+</span>
-                    </div>
+                    </label>
                   )}
                 </div>
                 <div style={{ marginTop: 10, color: "#444", fontSize: 11 }}>
@@ -935,17 +1063,18 @@ function RegisterFlow({ onBack, onDone }) {
         {!stepValid(step) && (
           <div className="form-warning">{t("fill_required")}</div>
         )}
+        {error && <div className="form-error">{error}</div>}
         <div className="form-actions">
           {step > 0 && (
-            <button className="btn btn-ghost" onClick={() => setStep(s => s - 1)}>{t("back_btn")}</button>
+            <button className="btn btn-ghost" disabled={submitting} onClick={() => setStep(s => s - 1)}>{t("back_btn")}</button>
           )}
           {step < STEPS.length - 1 ? (
             <button className="btn btn-primary" disabled={!stepValid(step)}
               onClick={() => stepValid(step) && setStep(s => s + 1)}>{t("next_btn")}</button>
           ) : (
-            <button className="btn btn-primary" disabled={!stepValid(step)}
-              onClick={() => stepValid(step) && setDone(true)}>
-              {t("start_trial", { m: TRIAL_MONTHS })}
+            <button className="btn btn-primary" disabled={!stepValid(step) || submitting}
+              onClick={handleSubmit}>
+              {submitting ? t("submitting") : t("start_trial", { m: TRIAL_MONTHS })}
             </button>
           )}
         </div>
@@ -955,23 +1084,25 @@ function RegisterFlow({ onBack, onDone }) {
 }
 
 // ─── EXPLORE PAGE ──────────────────────────────────────────────────────────────
-function ExplorePage({ onArtist }) {
+function ExplorePage({ onArtist, artists }) {
   const { lang, t } = useLang();
   const [exploreCity, setExploreCity] = useState(null);
   const [exploreCat, setExploreCat] = useState(null);
   const [exploreStyle, setExploreStyle] = useState(null);
 
-  const cityStats = ALL_CITIES.map(c => ({
+  const cities = [...new Set(artists.map(a => a.city))].sort();
+
+  const cityStats = cities.map(c => ({
     city: c,
-    count: ARTISTS.filter(a => a.city === c).length,
+    count: artists.filter(a => a.city === c).length,
   }));
 
   const catStats = ALL_CATEGORIES.map(c => ({
     cat: c,
-    count: ARTISTS.filter(a => a.categories.includes(c)).length,
-  }));
+    count: artists.filter(a => a.categories.includes(c)).length,
+  })).filter(s => s.count > 0);
 
-  const filteredArtists = ARTISTS.filter(a => {
+  const filteredArtists = artists.filter(a => {
     const mc = !exploreCity || a.city === exploreCity;
     const mk = !exploreCat || a.categories.includes(exploreCat);
     const ms = !exploreStyle || a.styles.includes(exploreStyle);
@@ -994,7 +1125,7 @@ function ExplorePage({ onArtist }) {
           <div className="explore-section">
             <div className="section-header">
               <span className="section-title">{t("cities")}</span>
-              <span className="section-count">{t("cities_count", { n: ALL_CITIES.length })}</span>
+              <span className="section-count">{t("cities_count", { n: cities.length })}</span>
             </div>
             <div className="city-grid">
               {cityStats.map(({ city, count }) => (
@@ -1061,7 +1192,7 @@ function ExplorePage({ onArtist }) {
           {exploreCat && !exploreCity && (
             <div className="filter-row" style={{ marginBottom: 20 }}>
               <span className="filter-label">{t("f_city")}</span>
-              {ALL_CITIES.map(c => (
+              {cities.map(c => (
                 <button key={c} className={`chip ${exploreCity === c ? "active" : ""}`}
                   onClick={() => setExploreCity(exploreCity === c ? null : c)}>{c}</button>
               ))}
@@ -1165,18 +1296,20 @@ function ArtistProfile({ artist: a, onBack }) {
 }
 
 // ─── SEARCH PAGE ───────────────────────────────────────────────────────────────
-function SearchPage({ onArtist }) {
+function SearchPage({ onArtist, artists }) {
   const { lang, t } = useLang();
   const [q, setQ] = useState("");
   const [cityF, setCityF] = useState("Wszystkie");
   const [catF, setCatF] = useState("Wszystkie");
   const [styleF, setStyleF] = useState("Wszystkie");
 
+  const cities = [...new Set(artists.map(a => a.city))].sort();
+
   const availableStyles = catF === "Tatuaż"
     ? ["Wszystkie", ...TATTOO_STYLES]
     : catF !== "Wszystkie" ? ["Wszystkie", ...(OTHER_STYLES[catF] || [])] : [];
 
-  const filtered = ARTISTS.filter(a => {
+  const filtered = artists.filter(a => {
     const lq = q.toLowerCase();
     const ms = !q || a.nick.toLowerCase().includes(lq) || a.name?.toLowerCase().includes(lq)
       || a.city.toLowerCase().includes(lq)
@@ -1204,7 +1337,7 @@ function SearchPage({ onArtist }) {
       <div className="filters-panel">
         <div className="filter-row">
           <span className="filter-label">{t("f_city")}</span>
-          {["Wszystkie", ...ALL_CITIES].map(c => (
+          {["Wszystkie", ...cities].map(c => (
             <button key={c} className={`chip ${cityF === c ? "active" : ""}`}
               onClick={() => setCityF(c)}>{c === "Wszystkie" ? t("all") : c}</button>
           ))}
@@ -1253,11 +1386,54 @@ function SearchPage({ onArtist }) {
   );
 }
 
+// ─── LOGIN MODAL ───────────────────────────────────────────────────────────────
+function LoginModal({ onClose }) {
+  const { t } = useLang();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const submit = async () => {
+    setBusy(true); setErr("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setBusy(false);
+    if (error) setErr(t("login_error"));
+    else onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><IconX /></button>
+        <h2>{t("login_title")}</h2>
+        <p>UsArt</p>
+        <div className="form-row">
+          <label className="form-label">{t("l_email")}</label>
+          <input className="form-input" type="email" value={email}
+            onChange={e => setEmail(e.target.value)} placeholder={t("ph_email")} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("l_password")}</label>
+          <input className="form-input" type="password" value={password}
+            onChange={e => setPassword(e.target.value)} placeholder="••••••" />
+        </div>
+        {err && <div className="form-error">{err}</div>}
+        <button className="btn btn-primary" disabled={busy || !email || !password} onClick={submit}>
+          {busy ? "…" : t("login_btn")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("search");           // "search" | "explore" | "register"
   const [profileArtist, setProfileArtist] = useState(null);
-  const [prevTab, setPrevTab] = useState("search");
+  const [dbArtists, setDbArtists] = useState([]);
+  const [session, setSession] = useState(null);
+  const [showLogin, setShowLogin] = useState(false);
   const [lang, setLangState] = useState(() => {
     try { return localStorage.getItem("usart_lang") || "pl"; } catch { return "pl"; }
   });
@@ -1272,24 +1448,66 @@ export default function App() {
     return s;
   };
 
-  const openArtist = (a) => { setPrevTab(tab); setProfileArtist(a); };
-  const closeArtist = () => setProfileArtist(null);
+  const artistsRef = useRef([]);
+
+  const loadArtists = async () => {
+    try {
+      const { data, error } = await supabase.from("artists").select("*, projects(*)");
+      if (!error && data) setDbArtists(data.map(fromDb));
+    } catch { /* zostaw dane przykładowe */ }
+  };
+
+  useEffect(() => {
+    loadArtists();
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Nawigacja podpięta do historii przeglądarki (strzałka "wstecz" działa)
+  useEffect(() => {
+    window.history.replaceState({ tab: "search", artistId: null }, "");
+    const onPop = (e) => {
+      const st = e.state || { tab: "search", artistId: null };
+      setTab(st.tab || "search");
+      const a = st.artistId != null
+        ? artistsRef.current.find(x => String(x.id) === String(st.artistId)) : null;
+      setProfileArtist(a || null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // Prawdziwi artyści z bazy + przykładowi (żeby katalog nie był pusty na start)
+  const artists = [...dbArtists, ...ARTISTS];
+  artistsRef.current = artists;
+
+  const go = (next, push = true) => {
+    setTab(next.tab);
+    setProfileArtist(next.artist || null);
+    if (push)
+      window.history.pushState(
+        { tab: next.tab, artistId: next.artist ? next.artist.id : null }, "");
+  };
+
+  const openArtist = (a) => go({ tab, artist: a });
+  const closeArtist = () => window.history.back();
 
   return (
     <LangContext.Provider value={{ lang, setLang, t }}>
       <style>{css}</style>
       <div className="app">
         <nav className="nav">
-          <span className="nav-logo" onClick={() => { setProfileArtist(null); setTab("search"); }}>
+          <span className="nav-logo" onClick={() => go({ tab: "search" })}>
             UsArt
           </span>
           <div className="nav-tabs">
             <button className={`nav-tab ${tab === "search" && !profileArtist ? "active" : ""}`}
-              onClick={() => { setProfileArtist(null); setTab("search"); }}>
+              onClick={() => go({ tab: "search" })}>
               <IconSearch /> {t("nav_search")}
             </button>
             <button className={`nav-tab ${tab === "explore" && !profileArtist ? "active" : ""}`}
-              onClick={() => { setProfileArtist(null); setTab("explore"); }}>
+              onClick={() => go({ tab: "explore" })}>
               <IconCompass /> {t("nav_explore")}
             </button>
           </div>
@@ -1298,27 +1516,40 @@ export default function App() {
               <button className={lang === "pl" ? "active" : ""} onClick={() => setLang("pl")}>PL</button>
               <button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>EN</button>
             </div>
-            <button className="btn btn-ghost" onClick={() => { setProfileArtist(null); setTab("search"); }}>
-              {t("login")}
-            </button>
-            <button className="btn btn-primary" onClick={() => { setProfileArtist(null); setTab("register"); }}>
-              <IconUser style={{ display: "inline", marginRight: 4 }} /> {t("join")}
-            </button>
+            {session ? (
+              <div className="nav-user">
+                <span className="nav-email">{session.user.email}</span>
+                <button className="btn btn-ghost" onClick={() => supabase.auth.signOut()}>
+                  {t("logout")}
+                </button>
+              </div>
+            ) : (
+              <>
+                <button className="btn btn-ghost" onClick={() => setShowLogin(true)}>
+                  {t("login")}
+                </button>
+                <button className="btn btn-primary" onClick={() => go({ tab: "register" })}>
+                  <IconUser style={{ display: "inline", marginRight: 4 }} /> {t("join")}
+                </button>
+              </>
+            )}
           </div>
         </nav>
 
         {profileArtist ? (
           <ArtistProfile artist={profileArtist} onBack={closeArtist} />
         ) : tab === "search" ? (
-          <SearchPage onArtist={openArtist} />
+          <SearchPage onArtist={openArtist} artists={artists} />
         ) : tab === "explore" ? (
-          <ExplorePage onArtist={openArtist} />
+          <ExplorePage onArtist={openArtist} artists={artists} />
         ) : tab === "register" ? (
           <RegisterFlow
-            onBack={() => setTab("search")}
-            onDone={() => setTab("search")}
+            onBack={() => window.history.back()}
+            onDone={() => { loadArtists(); go({ tab: "search" }); }}
           />
         ) : null}
+
+        {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
       </div>
     </LangContext.Provider>
   );
