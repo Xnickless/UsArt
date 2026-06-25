@@ -117,11 +117,20 @@ const ARTISTS = [
 
 const ALL_CITIES = [...new Set(ARTISTS.map((a) => a.city))].sort();
 const REGISTER_CITIES = [
-  "Warszawa", "Kraków", "Gdańsk", "Wrocław", "Poznań", "Łódź",
-  "Katowice", "Szczecin", "Bydgoszcz", "Lublin", "Białystok",
-  "Rzeszów", "Toruń", "Gdynia", "Sopot", "Częstochowa",
-  "Radom", "Sosnowiec", "Kielce", "Gliwice", "Olsztyn",
-  "Opole", "Zakopane", "Nowy Sącz",
+  "Warszawa", "Kraków", "Łódź", "Wrocław", "Poznań", "Gdańsk",
+  "Szczecin", "Bydgoszcz", "Lublin", "Białystok", "Katowice", "Gdynia",
+  "Częstochowa", "Radom", "Rzeszów", "Toruń", "Sosnowiec", "Kielce",
+  "Gliwice", "Olsztyn", "Zabrze", "Bielsko-Biała", "Bytom", "Zielona Góra",
+  "Rybnik", "Ruda Śląska", "Opole", "Tychy", "Gorzów Wielkopolski",
+  "Dąbrowa Górnicza", "Płock", "Elbląg", "Wałbrzych", "Włocławek", "Tarnów",
+  "Chorzów", "Koszalin", "Kalisz", "Legnica", "Grudziądz", "Słupsk",
+  "Jaworzno", "Jastrzębie-Zdrój", "Nowy Sącz", "Jelenia Góra", "Siedlce",
+  "Mysłowice", "Konin", "Piła", "Piotrków Trybunalski", "Inowrocław", "Lubin",
+  "Ostrów Wielkopolski", "Suwałki", "Stargard", "Gniezno", "Siemianowice Śląskie",
+  "Głogów", "Pabianice", "Leszno", "Żory", "Zamość", "Pruszków", "Łomża",
+  "Ełk", "Tarnowskie Góry", "Tczew", "Chełm", "Mielec", "Kędzierzyn-Koźle",
+  "Przemyśl", "Stalowa Wola", "Tomaszów Mazowiecki", "Sopot",
+  "Zakopane", "Świnoujście",
 ];
 const ALL_CATEGORIES = [...new Set(ARTISTS.flatMap((a) => a.categories))].sort();
 
@@ -145,9 +154,12 @@ const I18N = {
     create_account: "Utwórz konto", create_account_sub: "Podstawowe dane do logowania i kontaktu.",
     l_nick: "Nick artystyczny *", ph_nick: "np. marta.ink", hint_nick: "Twój unikalny identyfikator w UsArt",
     l_name: "Imię i nazwisko", ph_optional: "Opcjonalnie", l_email: "E-mail *", ph_email: "twoj@email.pl",
+    l_password: "Hasło *", ph_password: "min. 6 znaków",
     l_ig: "Instagram", ph_ig: "@nick (bez małpy)",
+    fill_required: "Uzupełnij wymagane pola oznaczone *",
     profile_title: "Twój profil artystyczny", profile_sub: "Te informacje zobaczą osoby szukające artystów.",
-    l_city: "Miasto *", l_cat: "Kategoria *", l_style: "Styl *", chosen: "Wybrano:",
+    l_city: "Miasto *", city_other_ph: "Nie ma Twojego miasta? Wpisz je tutaj...",
+    l_cat: "Kategoria *", l_style: "Styl *", chosen: "Wybrano:",
     l_bio: "Bio / Opis", ph_bio: "Kilka słów o Tobie i Twojej twórczości...",
     photos_title: "Dodaj swoje prace", photos_sub: "Wgraj zdjęcia projektów — minimum 2, maksimum 12.",
     upload_click: "Kliknij, aby dodać zdjęcia", upload_hint: "PNG, JPG, WEBP · maks. 10 MB każde",
@@ -196,9 +208,12 @@ const I18N = {
     create_account: "Create account", create_account_sub: "Basic details for login and contact.",
     l_nick: "Artist nickname *", ph_nick: "e.g. marta.ink", hint_nick: "Your unique identifier on UsArt",
     l_name: "Full name", ph_optional: "Optional", l_email: "Email *", ph_email: "you@email.com",
+    l_password: "Password *", ph_password: "min. 6 characters",
     l_ig: "Instagram", ph_ig: "@handle (without @)",
+    fill_required: "Fill in the required fields marked *",
     profile_title: "Your artist profile", profile_sub: "This information is shown to people searching for artists.",
-    l_city: "City *", l_cat: "Category *", l_style: "Style *", chosen: "Selected:",
+    l_city: "City *", city_other_ph: "Can't find your city? Type it here...",
+    l_cat: "Category *", l_style: "Style *", chosen: "Selected:",
     l_bio: "Bio / Description", ph_bio: "A few words about you and your work...",
     photos_title: "Add your work", photos_sub: "Upload project photos — minimum 2, maximum 12.",
     upload_click: "Click to add photos", upload_hint: "PNG, JPG, WEBP · max 10 MB each",
@@ -335,6 +350,9 @@ const css = `
   .btn-ghost:hover { background: #1a1a1a; color: #ddd; }
   .btn-primary { background: linear-gradient(135deg, #e879f9, #818cf8); color: #fff; }
   .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn:disabled:hover { opacity: .4; transform: none; }
+  .form-warning { font-size: 12px; color: #f0a868; margin-top: 18px; text-align: right; }
 
   /* ── HERO ── */
   .hero { padding: 72px 28px 48px; text-align: center; max-width: 680px; margin: 0 auto; }
@@ -605,12 +623,20 @@ function RegisterFlow({ onBack, onDone }) {
   const { lang, t } = useLang();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
-    nick: "", name: "", email: "", instagram: "", city: "",
+    nick: "", name: "", email: "", password: "", instagram: "", city: "",
     category: "", bio: "", styles: [], photos: [],
     cardName: "", cardNumber: "", cardExp: "", cardCvc: "",
     plan: "solo", members: 3,
   });
   const [done, setDone] = useState(false);
+
+  const stepValid = (s) => {
+    if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && form.password.length >= 6;
+    if (s === 1) return form.city.trim() && form.category && form.styles.length > 0;
+    if (s === 2) return form.photos.length >= 2;
+    if (s === 3) return form.cardName.trim() && form.cardNumber.trim() && form.cardExp.trim() && form.cardCvc.trim();
+    return true;
+  };
 
   const memberCount = form.plan === "studio" ? form.members : 1;
   const monthlyTotal = BASE_PRICE + (memberCount - 1) * EXTRA_PRICE;
@@ -698,6 +724,11 @@ function RegisterFlow({ onBack, onDone }) {
                 onChange={e => update("email", e.target.value)} />
             </div>
             <div className="form-row">
+              <label className="form-label">{t("l_password")}</label>
+              <input className="form-input" type="password" placeholder={t("ph_password")} value={form.password}
+                onChange={e => update("password", e.target.value)} />
+            </div>
+            <div className="form-row">
               <label className="form-label">{t("l_ig")}</label>
               <input className="form-input" placeholder={t("ph_ig")} value={form.instagram}
                 onChange={e => update("instagram", e.target.value)} />
@@ -713,7 +744,7 @@ function RegisterFlow({ onBack, onDone }) {
             {/* MIASTO — chipsy */}
             <div className="form-row">
               <label className="form-label">{t("l_city")}</label>
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 10 }}>
                 {REGISTER_CITIES.map(c => (
                   <button key={c} onClick={() => update("city", c)}
                     className={`chip ${form.city === c ? "active" : ""}`}
@@ -722,6 +753,8 @@ function RegisterFlow({ onBack, onDone }) {
                   </button>
                 ))}
               </div>
+              <input className="form-input" placeholder={t("city_other_ph")} value={form.city}
+                onChange={e => update("city", e.target.value)} />
             </div>
 
             {/* KATEGORIA */}
@@ -899,14 +932,19 @@ function RegisterFlow({ onBack, onDone }) {
           </>
         )}
 
+        {!stepValid(step) && (
+          <div className="form-warning">{t("fill_required")}</div>
+        )}
         <div className="form-actions">
           {step > 0 && (
             <button className="btn btn-ghost" onClick={() => setStep(s => s - 1)}>{t("back_btn")}</button>
           )}
           {step < STEPS.length - 1 ? (
-            <button className="btn btn-primary" onClick={() => setStep(s => s + 1)}>{t("next_btn")}</button>
+            <button className="btn btn-primary" disabled={!stepValid(step)}
+              onClick={() => stepValid(step) && setStep(s => s + 1)}>{t("next_btn")}</button>
           ) : (
-            <button className="btn btn-primary" onClick={() => setDone(true)}>
+            <button className="btn btn-primary" disabled={!stepValid(step)}
+              onClick={() => stepValid(step) && setDone(true)}>
               {t("start_trial", { m: TRIAL_MONTHS })}
             </button>
           )}
