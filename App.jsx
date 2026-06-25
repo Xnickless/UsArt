@@ -167,7 +167,12 @@ const I18N = {
     create_account: "Utwórz konto", create_account_sub: "Podstawowe dane do logowania i kontaktu.",
     l_nick: "Nick artystyczny *", ph_nick: "np. marta.ink", hint_nick: "Twój unikalny identyfikator w UsArt",
     l_name: "Imię i nazwisko", ph_optional: "Opcjonalnie", l_email: "E-mail *", ph_email: "twoj@email.pl",
-    l_password: "Hasło *", ph_password: "min. 6 znaków",
+    l_password: "Hasło *", ph_password: "Wpisz hasło", l_password2: "Powtórz hasło *",
+    ph_password2: "Wpisz hasło ponownie",
+    pw_intro: "Hasło musi zawierać:",
+    pw_len: "minimum 8 znaków", pw_lower: "jedną małą literę",
+    pw_upper: "jedną wielką literę", pw_special: "jeden znak specjalny",
+    pw_match_ok: "Hasła są zgodne", pw_match_bad: "Hasła nie są takie same",
     l_ig: "Instagram", ph_ig: "@nick (bez małpy)",
     fill_required: "Uzupełnij wymagane pola oznaczone *",
     profile_title: "Twój profil artystyczny", profile_sub: "Te informacje zobaczą osoby szukające artystów.",
@@ -224,7 +229,12 @@ const I18N = {
     create_account: "Create account", create_account_sub: "Basic details for login and contact.",
     l_nick: "Artist nickname *", ph_nick: "e.g. marta.ink", hint_nick: "Your unique identifier on UsArt",
     l_name: "Full name", ph_optional: "Optional", l_email: "Email *", ph_email: "you@email.com",
-    l_password: "Password *", ph_password: "min. 6 characters",
+    l_password: "Password *", ph_password: "Enter password", l_password2: "Repeat password *",
+    ph_password2: "Enter password again",
+    pw_intro: "Password must contain:",
+    pw_len: "at least 8 characters", pw_lower: "one lowercase letter",
+    pw_upper: "one uppercase letter", pw_special: "one special character",
+    pw_match_ok: "Passwords match", pw_match_bad: "Passwords don't match",
     l_ig: "Instagram", ph_ig: "@handle (without @)",
     fill_required: "Fill in the required fields marked *",
     profile_title: "Your artist profile", profile_sub: "This information is shown to people searching for artists.",
@@ -548,6 +558,17 @@ const css = `
   .form-input:focus { border-color: #818cf8; }
   .form-input::placeholder { color: #333; }
   .form-hint { font-size: 11px; color: #444; margin-top: 5px; }
+  .pw-intro { font-size: 12px; color: #777; margin-bottom: 8px; }
+  .pw-rules { list-style: none; margin: 0 0 12px; display: flex; flex-direction: column; gap: 6px; }
+  .pw-rules li { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #666;
+    transition: color .15s; }
+  .pw-dot { width: 9px; height: 9px; border-radius: 50%; background: #2c2c2c; flex-shrink: 0;
+    transition: background .15s, box-shadow .15s; }
+  .pw-rules li.ok { color: #4ade80; }
+  .pw-rules li.ok .pw-dot { background: #4ade80; box-shadow: 0 0 7px rgba(74,222,128,.6); }
+  .pw-match { font-size: 12px; margin-top: 6px; }
+  .pw-match.ok { color: #4ade80; }
+  .pw-match.bad { color: #f87171; }
   .upload-zone { border: 2px dashed #252525; border-radius: 12px; padding: 36px 24px;
     text-align: center; cursor: pointer; transition: all .2s; color: #444; }
   .upload-zone:hover { border-color: #818cf8; color: #818cf8; background: rgba(129,140,248,.04); }
@@ -655,15 +676,24 @@ function RegisterFlow({ onBack, onDone }) {
   const { lang, t } = useLang();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
-    nick: "", name: "", email: "", password: "", instagram: "", city: "",
+    nick: "", name: "", email: "", password: "", password2: "", instagram: "", city: "",
     category: "", bio: "", styles: [], photos: [],
     cardName: "", cardNumber: "", cardExp: "", cardCvc: "",
     plan: "solo", members: 3,
   });
   const [done, setDone] = useState(false);
 
+  const pwRules = {
+    len: form.password.length >= 8,
+    lower: /[a-z]/.test(form.password),
+    upper: /[A-Z]/.test(form.password),
+    special: /[^A-Za-z0-9]/.test(form.password),
+  };
+  const pwValid = pwRules.len && pwRules.lower && pwRules.upper && pwRules.special;
+  const pwMatch = form.password.length > 0 && form.password === form.password2;
+
   const stepValid = (s) => {
-    if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && form.password.length >= 6;
+    if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && pwMatch;
     if (s === 1) return form.city.trim() && form.category && form.styles.length > 0;
     if (s === 2) return form.photos.length >= 2;
     if (s === 3) return form.cardName.trim() && form.cardNumber.trim() && form.cardExp.trim() && form.cardCvc.trim();
@@ -804,8 +834,25 @@ function RegisterFlow({ onBack, onDone }) {
             </div>
             <div className="form-row">
               <label className="form-label">{t("l_password")}</label>
+              <div className="pw-intro">{t("pw_intro")}</div>
+              <ul className="pw-rules">
+                <li className={pwRules.len ? "ok" : ""}><span className="pw-dot" /> {t("pw_len")}</li>
+                <li className={pwRules.lower ? "ok" : ""}><span className="pw-dot" /> {t("pw_lower")}</li>
+                <li className={pwRules.upper ? "ok" : ""}><span className="pw-dot" /> {t("pw_upper")}</li>
+                <li className={pwRules.special ? "ok" : ""}><span className="pw-dot" /> {t("pw_special")}</li>
+              </ul>
               <input className="form-input" type="password" placeholder={t("ph_password")} value={form.password}
                 onChange={e => update("password", e.target.value)} />
+            </div>
+            <div className="form-row">
+              <label className="form-label">{t("l_password2")}</label>
+              <input className="form-input" type="password" placeholder={t("ph_password2")} value={form.password2}
+                onChange={e => update("password2", e.target.value)} />
+              {form.password2.length > 0 && (
+                <div className={`pw-match ${pwMatch ? "ok" : "bad"}`}>
+                  {pwMatch ? t("pw_match_ok") : t("pw_match_bad")}
+                </div>
+              )}
             </div>
             <div className="form-row">
               <label className="form-label">{t("l_ig")}</label>
