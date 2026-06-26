@@ -2354,6 +2354,11 @@ function EditProfile({ artist, onSaved }) {
   );
 }
 
+// Ścieżki URL dla zakładek (profile artystów: /nick)
+const TAB_PATHS = { search: "/", explore: "/odkrywaj", works: "/prace",
+  match: "/dobierz", map: "/mapa", register: "/dolacz", account: "/konto" };
+const PATH_TABS = Object.fromEntries(Object.entries(TAB_PATHS).map(([t, p]) => [p, t]));
+
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("search");           // "search" | "explore" | "register"
@@ -2377,12 +2382,15 @@ export default function App() {
   };
 
   const artistsRef = useRef([]);
+  const [pendingNick, setPendingNick] = useState(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const loadArtists = async () => {
     try {
       const { data, error } = await supabase.from("artists").select("*, projects(*)");
       if (!error && data) setDbArtists(data.map(fromDb));
     } catch { /* zostaw dane przykładowe */ }
+    setDataLoaded(true);
   };
 
   useEffect(() => {
@@ -2395,15 +2403,21 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Nawigacja podpięta do historii przeglądarki (strzałka "wstecz" działa)
+  // Routing po adresie URL (np. usart.pl/marta.ink) + przycisk "wstecz"
   useEffect(() => {
-    window.history.replaceState({ tab: "search", artistId: null }, "");
+    const p = decodeURIComponent(window.location.pathname);
+    const isNick = p.length > 1 && !PATH_TABS[p];
+    setTab(PATH_TABS[p] || "search");
+    if (isNick) setPendingNick(p.slice(1));
+    window.history.replaceState({ tab: PATH_TABS[p] || "search", nick: isNick ? p.slice(1) : null }, "", p);
+
     const onPop = (e) => {
-      const st = e.state || { tab: "search", artistId: null };
+      const st = e.state || {};
       setTab(st.tab || "search");
-      const a = st.artistId != null
-        ? artistsRef.current.find(x => String(x.id) === String(st.artistId)) : null;
-      setProfileArtist(a || null);
+      if (st.nick) {
+        const a = artistsRef.current.find(x => x.nick === st.nick);
+        if (a) setProfileArtist(a); else { setProfileArtist(null); setPendingNick(st.nick); }
+      } else setProfileArtist(null);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -2414,12 +2428,25 @@ export default function App() {
   artistsRef.current = artists;
   const myArtist = session ? dbArtists.find(a => a.id === session.user.id) : null;
 
+  // Rozwiązanie /nick na profil, gdy dane się załadują
+  useEffect(() => {
+    if (!pendingNick) return;
+    const a = artists.find(x => x.nick === pendingNick);
+    if (a) { setProfileArtist(a); setPendingNick(null); }
+    else if (dataLoaded) setPendingNick(null);
+  }, [pendingNick, dataLoaded, dbArtists]);
+
+  // Tytuł karty przeglądarki (udostępnianie / SEO)
+  useEffect(() => {
+    document.title = profileArtist ? `@${profileArtist.nick} · UsArt` : "UsArt — znajdź artystę";
+  }, [profileArtist]);
+
   const go = (next, push = true) => {
     setTab(next.tab);
     setProfileArtist(next.artist || null);
-    if (push)
-      window.history.pushState(
-        { tab: next.tab, artistId: next.artist ? next.artist.id : null }, "");
+    const url = next.artist ? "/" + next.artist.nick : (TAB_PATHS[next.tab] || "/");
+    const state = { tab: next.tab, nick: next.artist ? next.artist.nick : null };
+    if (push) window.history.pushState(state, "", url);
   };
 
   const openArtist = (a) => go({ tab, artist: a });
