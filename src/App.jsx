@@ -147,7 +147,8 @@ const fromDb = (a) => ({
 // ─── i18n (PL / EN) ─────────────────────────────────────────────────────────────
 const I18N = {
   pl: {
-    nav_search: "Szukaj", nav_explore: "Odkrywaj", nav_works: "Prace", nav_match: "Dobierz",
+    nav_search: "Szukaj", nav_explore: "Odkrywaj", nav_works: "Prace", nav_match: "Dobierz", nav_map: "Mapa",
+    map_title: "Mapa artystów", map_sub: "Kliknij miasto na mapie, aby zobaczyć artystów.",
     works_title: "Prace", works_sub: "Przeglądaj wszystkie prace artystów — kliknij, by zobaczyć profil.",
     match_title: "Dobierz artystę", match_sub: "Odpowiedz na kilka pytań, a pokażemy pasujących artystów.",
     match_q_cat: "Czego szukasz?", match_q_style: "Jaki styl Cię interesuje?",
@@ -236,7 +237,8 @@ const I18N = {
     go_home: "Wróć na stronę główną", see_profile: "Zobacz swój profil",
   },
   en: {
-    nav_search: "Search", nav_explore: "Explore", nav_works: "Work", nav_match: "Match",
+    nav_search: "Search", nav_explore: "Explore", nav_works: "Work", nav_match: "Match", nav_map: "Map",
+    map_title: "Artist map", map_sub: "Click a city on the map to see its artists.",
     works_title: "Work", works_sub: "Browse all artists' work — click to see the profile.",
     match_title: "Find your artist", match_sub: "Answer a few questions and we'll show matching artists.",
     match_q_cat: "What are you looking for?", match_q_style: "Which style interests you?",
@@ -362,6 +364,26 @@ const TITLE_EN = {
   "Portret w akwareli": "Watercolor portrait", "Plakat koncertowy": "Concert poster",
   "Okładka albumu": "Album cover", "Komiks Strona 1": "Comic Page 1",
   "Praga nocą": "Praga at night",
+};
+
+// Współrzędne miast (do mapy)
+const CITY_COORDS = {
+  "Warszawa": [52.2297, 21.0122], "Kraków": [50.0647, 19.9450], "Łódź": [51.7592, 19.4560],
+  "Wrocław": [51.1079, 17.0385], "Poznań": [52.4064, 16.9252], "Gdańsk": [54.3520, 18.6466],
+  "Szczecin": [53.4285, 14.5528], "Bydgoszcz": [53.1235, 18.0084], "Lublin": [51.2465, 22.5684],
+  "Białystok": [53.1325, 23.1688], "Katowice": [50.2649, 19.0238], "Gdynia": [54.5189, 18.5305],
+  "Częstochowa": [50.8118, 19.1203], "Radom": [51.4027, 21.1471], "Rzeszów": [50.0413, 21.9990],
+  "Toruń": [53.0138, 18.5984], "Sosnowiec": [50.2862, 19.1040], "Kielce": [50.8661, 20.6286],
+  "Gliwice": [50.2945, 18.6714], "Olsztyn": [53.7784, 20.4801], "Zabrze": [50.3249, 18.7857],
+  "Bielsko-Biała": [49.8224, 19.0584], "Bytom": [50.3483, 18.9157], "Zielona Góra": [51.9356, 15.5062],
+  "Rybnik": [50.0971, 18.5416], "Opole": [50.6751, 17.9213], "Tychy": [50.1372, 18.9663],
+  "Gorzów Wielkopolski": [52.7368, 15.2288], "Płock": [52.5468, 19.7064], "Elbląg": [54.1522, 19.4088],
+  "Wałbrzych": [50.7714, 16.2845], "Tarnów": [50.0121, 20.9858], "Koszalin": [54.1944, 16.1722],
+  "Kalisz": [51.7611, 18.0910], "Legnica": [51.2070, 16.1619], "Słupsk": [54.4641, 17.0287],
+  "Nowy Sącz": [49.6174, 20.7156], "Jelenia Góra": [50.9044, 15.7197], "Sopot": [54.4418, 18.5601],
+  "Zakopane": [49.2992, 19.9496], "Gniezno": [52.5348, 17.5826], "Przemyśl": [49.7838, 22.7677],
+  "Suwałki": [54.1117, 22.9309], "Chełm": [51.1431, 23.4716], "Świnoujście": [53.9100, 14.2470],
+  "Mielec": [50.2872, 21.4239], "Pruszków": [52.1705, 20.8021], "Stalowa Wola": [50.5826, 22.0537],
 };
 
 const LangContext = createContext({ lang: "pl", setLang: () => {}, t: (k) => k });
@@ -500,6 +522,9 @@ const css = `
   .muted { font-size: 13px; color: #555; padding: 8px 0; }
 
   .match-q { font-size: 19px; font-weight: 600; color: #eee; margin: 8px 0 18px; }
+  .map-box { height: 460px; border-radius: 16px; overflow: hidden; border: 1px solid #1c1c1c;
+    margin-bottom: 24px; z-index: 0; background: #0d0d0d; }
+  .map-box .leaflet-container { height: 100%; width: 100%; background: #0d0d0d; font-family: inherit; }
 
   /* ── WORKS FEED ── */
   .works-grid { max-width: 1160px; margin: 0 auto; padding: 0 28px 80px;
@@ -1581,6 +1606,87 @@ function ArtistProfile({ artist: a, onBack, session }) {
   );
 }
 
+// ─── MAPA (Leaflet z CDN, ciemne kafelki CARTO) ─────────────────────────────────
+function loadLeaflet() {
+  return new Promise((resolve) => {
+    if (window.L) return resolve(window.L);
+    if (!document.getElementById("leaflet-css")) {
+      const css = document.createElement("link");
+      css.id = "leaflet-css"; css.rel = "stylesheet";
+      css.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+      document.head.appendChild(css);
+    }
+    const s = document.createElement("script");
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+    s.onload = () => resolve(window.L);
+    document.head.appendChild(s);
+  });
+}
+
+function MapView({ artists, onArtist }) {
+  const { t } = useLang();
+  const elRef = useRef(null);
+  const mapRef = useRef(null);
+  const layerRef = useRef(null);
+  const [selCity, setSelCity] = useState(null);
+
+  const draw = () => {
+    const L = window.L;
+    if (!L || !layerRef.current) return;
+    layerRef.current.clearLayers();
+    const counts = {};
+    artists.forEach(a => { counts[a.city] = (counts[a.city] || 0) + 1; });
+    Object.entries(counts).forEach(([city, n]) => {
+      const c = CITY_COORDS[city];
+      if (!c) return;
+      const m = L.circleMarker(c, { radius: 7 + Math.min(n * 2, 14),
+        color: "#818cf8", weight: 2, fillColor: "#e879f9", fillOpacity: .65 });
+      m.addTo(layerRef.current).bindTooltip(`${city} (${n})`);
+      m.on("click", () => setSelCity(city));
+    });
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLeaflet().then(L => {
+      if (cancelled || mapRef.current || !elRef.current) return;
+      const map = L.map(elRef.current, { scrollWheelZoom: false }).setView([52.1, 19.4], 6);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        { attribution: "© OpenStreetMap, © CARTO", maxZoom: 18 }).addTo(map);
+      mapRef.current = map;
+      layerRef.current = L.layerGroup().addTo(map);
+      draw();
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => { draw(); }, [artists]);
+
+  const cityArtists = selCity ? artists.filter(a => a.city === selCity) : [];
+
+  return (
+    <div className="explore">
+      <div className="explore-title">{t("map_title")}</div>
+      <div className="explore-sub">{t("map_sub")}</div>
+      <div ref={elRef} className="map-box" />
+      {selCity && (
+        <div className="explore-results">
+          <div className="section-header" style={{ marginBottom: 18 }}>
+            <span className="section-title">{selCity}</span>
+            <span className="section-count">{t("artists_count", { n: cityArtists.length })}</span>
+            <button className="mini-link" style={{ marginLeft: "auto" }} onClick={() => setSelCity(null)}>
+              <IconX />
+            </button>
+          </div>
+          <div className="grid" style={{ padding: 0 }}>
+            {cityArtists.map(a => <ArtistCard key={a.id} artist={a} onClick={() => onArtist(a)} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── ARTIST MATCHER (kreator doboru) ────────────────────────────────────────────
 function ArtistMatcher({ artists, onArtist }) {
   const { lang, t } = useLang();
@@ -2231,6 +2337,10 @@ export default function App() {
               onClick={() => go({ tab: "match" })}>
               <IconCompass /> {t("nav_match")}
             </button>
+            <button className={`nav-tab ${tab === "map" && !profileArtist ? "active" : ""}`}
+              onClick={() => go({ tab: "map" })}>
+              <IconPin /> {t("nav_map")}
+            </button>
           </div>
           <div className="nav-right">
             <div className="lang-switch">
@@ -2271,6 +2381,8 @@ export default function App() {
           <WorksFeed onArtist={openArtist} artists={artists} />
         ) : tab === "match" ? (
           <ArtistMatcher onArtist={openArtist} artists={artists} />
+        ) : tab === "map" ? (
+          <MapView onArtist={openArtist} artists={artists} />
         ) : tab === "register" ? (
           <RegisterFlow
             onBack={() => window.history.back()}
