@@ -147,7 +147,9 @@ const fromDb = (a) => ({
 // ─── i18n (PL / EN) ─────────────────────────────────────────────────────────────
 const I18N = {
   pl: {
-    nav_search: "Szukaj", nav_explore: "Odkrywaj", login: "Zaloguj się", join: "Dołącz jako artysta",
+    nav_search: "Szukaj", nav_explore: "Odkrywaj", nav_works: "Prace",
+    works_title: "Prace", works_sub: "Przeglądaj wszystkie prace artystów — kliknij, by zobaczyć profil.",
+    login: "Zaloguj się", join: "Dołącz jako artysta",
     logout: "Wyloguj", login_title: "Zaloguj się", login_btn: "Zaloguj",
     login_error: "Błędny e-mail lub hasło.", submitting: "Tworzę konto...",
     err_taken: "Ten nick lub e-mail jest już zajęty.",
@@ -230,7 +232,9 @@ const I18N = {
     go_home: "Wróć na stronę główną", see_profile: "Zobacz swój profil",
   },
   en: {
-    nav_search: "Search", nav_explore: "Explore", login: "Log in", join: "Join as artist",
+    nav_search: "Search", nav_explore: "Explore", nav_works: "Work",
+    works_title: "Work", works_sub: "Browse all artists' work — click to see the profile.",
+    login: "Log in", join: "Join as artist",
     logout: "Log out", login_title: "Log in", login_btn: "Log in",
     login_error: "Wrong email or password.", submitting: "Creating account...",
     err_taken: "This nickname or email is already taken.",
@@ -386,6 +390,7 @@ const IconLock   = () => <Ico d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0
 const IconStar   = ({ fill }) => <Ico d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" size={16} fill={fill} />;
 const IconHeart  = ({ fill }) => <Ico d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" size={15} fill={fill} />;
 const IconFlag   = () => <Ico d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" size={13} />;
+const IconGrid   = () => <Ico d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />;
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const css = `
@@ -485,6 +490,21 @@ const css = `
   .login-hint { font-size: 13px; color: #666; padding: 12px; background: #0f0f0f;
     border: 1px solid #1a1a1a; border-radius: 12px; margin-bottom: 16px; text-align: center; }
   .muted { font-size: 13px; color: #555; padding: 8px 0; }
+
+  /* ── WORKS FEED ── */
+  .works-grid { max-width: 1160px; margin: 0 auto; padding: 0 28px 80px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .work-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden;
+    cursor: pointer; background: #181818; }
+  .work-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+  .work-item:hover img { transform: scale(1.05); }
+  .work-overlay { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 7px;
+    padding: 10px; opacity: 0; transition: opacity .2s;
+    background: linear-gradient(to top, rgba(0,0,0,.8) 0%, transparent 55%); }
+  .work-item:hover .work-overlay { opacity: 1; }
+  .work-overlay span { font-size: 12px; font-weight: 600; color: #fff; }
+  .work-overlay .work-avatar { width: 24px; height: 24px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.35); object-fit: cover; }
 
   /* ── HERO ── */
   .hero { padding: 72px 28px 48px; text-align: center; max-width: 680px; margin: 0 auto; }
@@ -1551,6 +1571,80 @@ function ArtistProfile({ artist: a, onBack, session }) {
   );
 }
 
+// ─── WORKS FEED (galeria wszystkich prac) ───────────────────────────────────────
+function WorksFeed({ artists, onArtist }) {
+  const { lang, t } = useLang();
+  const [catF, setCatF] = useState("Wszystkie");
+  const [styleF, setStyleF] = useState("Wszystkie");
+  const [cityF, setCityF] = useState("Wszystkie");
+
+  const cities = [...new Set(artists.map(a => a.city))].sort();
+  const availableStyles = catF === "Tatuaż"
+    ? ["Wszystkie", ...TATTOO_STYLES]
+    : catF !== "Wszystkie" ? ["Wszystkie", ...(OTHER_STYLES[catF] || [])] : [];
+
+  const works = artists.flatMap(a => (a.projects || []).map(p => ({ ...p, artist: a })));
+  const filtered = works.filter(w => {
+    const a = w.artist;
+    const mc = catF === "Wszystkie" || a.categories.includes(catF);
+    const ms = styleF === "Wszystkie" || a.styles.includes(styleF);
+    const mt = cityF === "Wszystkie" || a.city === cityF;
+    return mc && ms && mt;
+  });
+
+  return (
+    <div className="explore">
+      <div className="explore-title">{t("works_title")}</div>
+      <div className="explore-sub">{t("works_sub")}</div>
+
+      <div className="filters-panel" style={{ padding: 0, marginBottom: 24 }}>
+        <div className="filter-row">
+          <span className="filter-label">{t("f_cat")}</span>
+          {["Wszystkie", ...ALL_CATEGORIES].map(c => (
+            <button key={c} className={`chip ${catF === c ? "active" : ""}`}
+              onClick={() => { setCatF(c); setStyleF("Wszystkie"); }}>
+              {c === "Wszystkie" ? t("all") : tCat(c, lang)}
+            </button>
+          ))}
+        </div>
+        {availableStyles.length > 1 && (
+          <div className="filter-row">
+            <span className="filter-label">{t("f_style")}</span>
+            {availableStyles.map(s => (
+              <button key={s} className={`chip chip-style ${styleF === s ? "active" : ""}`}
+                onClick={() => setStyleF(s)}>{s === "Wszystkie" ? t("all") : tStyle(s, lang)}</button>
+            ))}
+          </div>
+        )}
+        <div className="filter-row">
+          <span className="filter-label">{t("f_city")}</span>
+          {["Wszystkie", ...cities].map(c => (
+            <button key={c} className={`chip ${cityF === c ? "active" : ""}`}
+              onClick={() => setCityF(c)}>{c === "Wszystkie" ? t("all") : c}</button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="empty"><h3>{t("no_results")}</h3><p>{t("try_filters")}</p></div>
+      ) : (
+        <div className="works-grid">
+          {filtered.map(w => (
+            <div className="work-item" key={typeof w.id === "string" ? w.id : "m" + w.id}
+              onClick={() => onArtist(w.artist)}>
+              <img src={w.img} alt={tTitle(w, lang)} />
+              <div className="work-overlay">
+                <img className="work-avatar" src={w.artist.avatar} alt="" />
+                <span>@{w.artist.nick}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SEARCH PAGE ───────────────────────────────────────────────────────────────
 function SearchPage({ onArtist, artists }) {
   const { lang, t } = useLang();
@@ -2031,6 +2125,10 @@ export default function App() {
               onClick={() => go({ tab: "explore" })}>
               <IconCompass /> {t("nav_explore")}
             </button>
+            <button className={`nav-tab ${tab === "works" && !profileArtist ? "active" : ""}`}
+              onClick={() => go({ tab: "works" })}>
+              <IconGrid /> {t("nav_works")}
+            </button>
           </div>
           <div className="nav-right">
             <div className="lang-switch">
@@ -2067,6 +2165,8 @@ export default function App() {
           <SearchPage onArtist={openArtist} artists={artists} />
         ) : tab === "explore" ? (
           <ExplorePage onArtist={openArtist} artists={artists} />
+        ) : tab === "works" ? (
+          <WorksFeed onArtist={openArtist} artists={artists} />
         ) : tab === "register" ? (
           <RegisterFlow
             onBack={() => window.history.back()}
