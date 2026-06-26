@@ -175,6 +175,7 @@ const I18N = {
     acc_name_taken: "Ta nazwa jest już zajęta — wybierz inną.",
     nav_fav: "Ulubieni", fav_sub: "Twoi zapisani artyści.",
     fav_login: "Zaloguj się, aby zobaczyć swoich ulubionych artystów.",
+    acc_photo: "Zdjęcie profilowe", acc_change_photo: "Zmień zdjęcie", acc_bio: "O mnie",
     edit_title: "Edytuj profil",
     edit_sub: "Zmień swoje dane i prace.", save: "Zapisz zmiany", saved: "Zapisano!",
     edit_photos: "Twoje prace", add_photos: "Dodaj zdjęcia", del: "Usuń",
@@ -201,7 +202,7 @@ const I18N = {
     hero_a: "Znajdź", hero_b: "artystę",
     hero_sub: "Wpisz nick, miasto lub styl — albo użyj filtrów poniżej.",
     search_ph: "np. kraków, fine line, @zuza...",
-    f_city: "Miasto", f_cat: "Kategoria", f_style: "Styl", all: "Wszystkie",
+    f_city: "Miasto", f_cat: "Kategoria", f_style: "Styl", all: "Wszystkie", city_other: "Inne",
     st_artists: "Artystów", st_projects: "Projektów",
     no_results: "Brak wyników", no_results_sub: "Zmień filtry lub wyszukiwaną frazę.",
     works: "prac",
@@ -285,6 +286,7 @@ const I18N = {
     acc_name_taken: "This name is already taken — choose another.",
     nav_fav: "Favorites", fav_sub: "Your saved artists.",
     fav_login: "Log in to see your favorite artists.",
+    acc_photo: "Profile photo", acc_change_photo: "Change photo", acc_bio: "About me",
     edit_title: "Edit profile",
     edit_sub: "Update your details and work.", save: "Save changes", saved: "Saved!",
     edit_photos: "Your work", add_photos: "Add photos", del: "Delete",
@@ -311,7 +313,7 @@ const I18N = {
     hero_a: "Find an", hero_b: "artist",
     hero_sub: "Enter a nickname, city or style — or use the filters below.",
     search_ph: "e.g. krakow, fine line, @zuza...",
-    f_city: "City", f_cat: "Category", f_style: "Style", all: "All",
+    f_city: "City", f_cat: "Category", f_style: "Style", all: "All", city_other: "Other",
     st_artists: "Artists", st_projects: "Projects",
     no_results: "No results", no_results_sub: "Change the filters or search term.",
     works: "works",
@@ -564,6 +566,7 @@ const css = `
   .social-author { font-size: 13px; font-weight: 600; color: #ddd; }
   .social-text { font-size: 13px; color: #aaa; line-height: 1.5; }
   .comment-img { margin-top: 10px; max-width: 180px; border-radius: 10px; cursor: pointer; display: block; }
+  .comment-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid #2a2a2a; }
   .login-hint { font-size: 13px; color: #666; padding: 12px; background: #0f0f0f;
     border: 1px solid #1a1a1a; border-radius: 12px; margin-bottom: 16px; text-align: center; }
   .muted { font-size: 13px; color: #555; padding: 8px 0; }
@@ -627,6 +630,11 @@ const css = `
     color: #666; font-size: 12px; cursor: pointer; transition: all .15s; white-space: nowrap; }
   .chip:hover { border-color: #383838; color: #bbb; }
   .chip.active { background: linear-gradient(135deg, #e879f9, #818cf8); border-color: transparent; color: #fff; }
+  .other-wrap { position: relative; display: inline-block; }
+  .other-pop { position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 50;
+    width: 340px; max-width: 80vw; max-height: 300px; overflow-y: auto; background: #141414;
+    border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px;
+    display: flex; flex-wrap: wrap; gap: 6px; box-shadow: 0 14px 36px rgba(0,0,0,.55); }
   .chip-style { font-size: 11px; padding: 4px 11px; }
 
   /* ── GRID ── */
@@ -1578,8 +1586,8 @@ function ArtistProfile({ artist: a, onBack, session }) {
     setReviews(rv || []); setComments(cm || []);
     const ids = [...new Set([...(rv || []).map(x => x.user_id), ...(cm || []).map(x => x.user_id)])];
     if (ids.length) {
-      const { data: pf } = await supabase.from("profiles").select("id,display_name").in("id", ids);
-      const m = {}; (pf || []).forEach(p => { m[p.id] = p.display_name; }); setNames(m);
+      const { data: pf } = await supabase.from("profiles").select("id,display_name,avatar").in("id", ids);
+      const m = {}; (pf || []).forEach(p => { m[p.id] = { name: p.display_name, avatar: p.avatar }; }); setNames(m);
     }
     if (uid) {
       const mine = (rv || []).find(x => x.user_id === uid);
@@ -1632,7 +1640,8 @@ function ArtistProfile({ artist: a, onBack, session }) {
     await supabase.from("reports").insert({ reporter: uid, target_type: type, target_id: id, reason });
   };
 
-  const nameOf = (id) => names[id] || t("anon_user");
+  const nameOf = (id) => names[id]?.name || t("anon_user");
+  const avatarOf = (id) => names[id]?.avatar;
 
   return (
     <>
@@ -1742,7 +1751,10 @@ function ArtistProfile({ artist: a, onBack, session }) {
               {comments.length === 0 ? <div className="muted">{t("no_comments")}</div> : comments.map(c => (
                 <div className="social-item" key={c.id}>
                   <div className="social-head">
-                    <span className="social-author">{nameOf(c.user_id)}</span>
+                    <span className="social-author" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {avatarOf(c.user_id) && <img className="comment-avatar" src={avatarOf(c.user_id)} alt="" />}
+                      {nameOf(c.user_id)}
+                    </span>
                     <span style={{ display: "flex", gap: 10 }}>
                       <button className="mini-link" onClick={() => report("comment", c.id)}>{t("report")}</button>
                       {uid === c.user_id && <button className="mini-link" onClick={() => delComment(c.id)}>{t("del")}</button>}
@@ -1946,6 +1958,36 @@ function ArtistMatcher({ artists, onArtist }) {
   );
 }
 
+// ─── FILTR MIAST (miasta z artystami + "Inne" z rozwijanym okienkiem) ───────────
+function CityFilter({ cities, value, onChange }) {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  const others = [...REGISTER_CITIES].sort((a, b) => a.localeCompare(b, "pl")).filter(c => !cities.includes(c));
+  const selectedOther = value !== "Wszystkie" && !cities.includes(value);
+
+  return (
+    <div className="filter-row">
+      <span className="filter-label">{t("f_city")}</span>
+      <button className={`chip ${value === "Wszystkie" ? "active" : ""}`} onClick={() => onChange("Wszystkie")}>{t("all")}</button>
+      {cities.map(c => (
+        <button key={c} className={`chip ${value === c ? "active" : ""}`} onClick={() => onChange(c)}>{c}</button>
+      ))}
+      {selectedOther && <button className="chip active" onClick={() => onChange(value)}>{value}</button>}
+      <div className="other-wrap" onMouseLeave={() => setOpen(false)}>
+        <button className="chip" onClick={() => setOpen(o => !o)}>{t("city_other")} ▾</button>
+        {open && (
+          <div className="other-pop">
+            {others.map(c => (
+              <button key={c} className={`chip ${value === c ? "active" : ""}`}
+                onClick={() => { onChange(c); setOpen(false); }}>{c}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── WORKS FEED (galeria wszystkich prac) ───────────────────────────────────────
 function WorksFeed({ artists, onArtist }) {
   const { lang, t } = useLang();
@@ -1991,13 +2033,7 @@ function WorksFeed({ artists, onArtist }) {
             ))}
           </div>
         )}
-        <div className="filter-row">
-          <span className="filter-label">{t("f_city")}</span>
-          {["Wszystkie", ...cities].map(c => (
-            <button key={c} className={`chip ${cityF === c ? "active" : ""}`}
-              onClick={() => setCityF(c)}>{c === "Wszystkie" ? t("all") : c}</button>
-          ))}
-        </div>
+        <CityFilter cities={cities} value={cityF} onChange={setCityF} />
       </div>
 
       {filtered.length === 0 ? (
@@ -2060,13 +2096,7 @@ function SearchPage({ onArtist, artists }) {
       </div>
 
       <div className="filters-panel">
-        <div className="filter-row">
-          <span className="filter-label">{t("f_city")}</span>
-          {["Wszystkie", ...cities].map(c => (
-            <button key={c} className={`chip ${cityF === c ? "active" : ""}`}
-              onClick={() => setCityF(c)}>{c === "Wszystkie" ? t("all") : c}</button>
-          ))}
-        </div>
+        <CityFilter cities={cities} value={cityF} onChange={setCityF} />
         <div className="filter-row">
           <span className="filter-label">{t("f_cat")}</span>
           {["Wszystkie", ...ALL_CATEGORIES].map(c => (
@@ -2607,6 +2637,8 @@ function UserAccount({ session, artists, onArtist }) {
   const { t } = useLang();
   const uid = session.user.id;
   const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatar, setAvatar] = useState("");
   const [favs, setFavs] = useState([]);
   const [nameBusy, setNameBusy] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
@@ -2620,21 +2652,33 @@ function UserAccount({ session, artists, onArtist }) {
   const [pwMsg, setPwMsg] = useState("");
 
   const load = async () => {
-    const { data: p } = await supabase.from("profiles").select("display_name").eq("id", uid).single();
-    setName(p?.display_name || "");
+    const { data: p } = await supabase.from("profiles").select("display_name,avatar,bio").eq("id", uid).single();
+    setName(p?.display_name || ""); setAvatar(p?.avatar || ""); setBio(p?.bio || "");
     const { data: f } = await supabase.from("favorites").select("artist_id").eq("user_id", uid);
     const ids = (f || []).map(x => x.artist_id);
     setFavs(artists.filter(a => ids.includes(a.id)));
   };
   useEffect(() => { load(); }, [artists]);
 
-  const saveName = async () => {
+  const uploadAvatar = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file) return;
+    setNameBusy(true);
+    const path = `avatars/${uid}/${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const { error } = await supabase.storage.from("portfolios").upload(path, file);
+    if (!error) setAvatar(supabase.storage.from("portfolios").getPublicUrl(path).data.publicUrl);
+    setNameBusy(false); setNameSaved(false);
+  };
+
+  const saveProfile = async () => {
     setNameBusy(true); setNameErr(""); setNameSaved(false);
     const clean = name.trim();
     const { data: taken } = await supabase.from("profiles")
       .select("id").ilike("display_name", clean).neq("id", uid).limit(1);
     if (taken && taken.length) { setNameBusy(false); setNameErr(t("acc_name_taken")); return; }
-    await supabase.from("profiles").update({ display_name: clean }).eq("id", uid);
+    await supabase.from("profiles").update({
+      display_name: clean, bio: bio || null, avatar: avatar || null,
+    }).eq("id", uid);
     setNameBusy(false); setNameSaved(true);
   };
   const saveEmail = async () => {
@@ -2659,18 +2703,34 @@ function UserAccount({ session, artists, onArtist }) {
       <h2 style={{ fontSize: 24, marginBottom: 4 }}>{t("account_title")}</h2>
       <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>{session.user.email}</p>
 
-      {/* Dane konta */}
+      {/* Dane konta (wizytówka) */}
       <div className="reg-card">
         <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("acc_profile")}</h2>
+        <div className="form-row">
+          <label className="form-label">{t("acc_photo")}</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <img className="profile-avatar" style={{ width: 64, height: 64 }}
+              src={avatar || "https://i.pravatar.cc/150?img=12"} alt="" />
+            <label className="btn btn-ghost" style={{ cursor: "pointer" }}>
+              <input type="file" accept="image/*" hidden onChange={uploadAvatar} />
+              {t("acc_change_photo")}
+            </label>
+          </div>
+        </div>
         <div className="form-row">
           <label className="form-label">{t("l_displayname")}</label>
           <input className="form-input" value={name}
             onChange={e => { setName(e.target.value); setNameSaved(false); setNameErr(""); }} />
         </div>
+        <div className="form-row">
+          <label className="form-label">{t("acc_bio")}</label>
+          <textarea className="form-input" rows={3} value={bio} placeholder={t("ph_bio")}
+            onChange={e => { setBio(e.target.value); setNameSaved(false); }} style={{ resize: "vertical" }} />
+        </div>
         {nameErr && <div className="form-error">{nameErr}</div>}
         <div className="form-actions">
           {nameSaved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
-          <button className="btn btn-primary" disabled={nameBusy || !name.trim()} onClick={saveName}>{t("save")}</button>
+          <button className="btn btn-primary" disabled={nameBusy || !name.trim()} onClick={saveProfile}>{t("save")}</button>
         </div>
       </div>
 
