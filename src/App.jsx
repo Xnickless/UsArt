@@ -2476,6 +2476,7 @@ function EditProfile({ artist, onSaved }) {
   const [form, setForm] = useState({
     name: artist.name || "", city: artist.city || "", category: artist.category || "",
     styles: artist.styles || [], bio: artist.bio || "", instagram: artist.instagram || "",
+    email: artist.email || "",
     address: artist.address || "", lat: artist.lat || null, lng: artist.lng || null,
   });
   const [busy, setBusy] = useState(false);
@@ -2493,6 +2494,7 @@ function EditProfile({ artist, onSaved }) {
     await supabase.from("artists").update({
       name: form.name || null, city: form.city, category: form.category,
       styles: form.styles, bio: form.bio || null, instagram: form.instagram || null,
+      email: form.email || null,
       address: form.address || null, lat: form.lat, lng: form.lng,
     }).eq("id", artist.id);
     setBusy(false); setSaved(true);
@@ -2610,7 +2612,13 @@ function EditProfile({ artist, onSaved }) {
         )}
         <div className="form-row">
           <label className="form-label">{t("l_ig")}</label>
-          <input className="form-input" value={form.instagram} onChange={e => update("instagram", e.target.value)} />
+          <input className="form-input" value={form.instagram} onChange={e => update("instagram", e.target.value)}
+            placeholder={t("ph_ig")} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("l_email")}</label>
+          <input className="form-input" type="email" value={form.email}
+            onChange={e => update("email", e.target.value)} placeholder={t("ph_email")} />
         </div>
         <div className="form-row">
           <label className="form-label">{t("l_bio")}</label>
