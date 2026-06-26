@@ -178,6 +178,12 @@ const I18N = {
     acc_photo: "Zdjęcie profilowe", acc_change_photo: "Zmień zdjęcie", acc_bio: "O mnie",
     edit_title: "Edytuj profil",
     edit_sub: "Zmień swoje dane i prace.", save: "Zapisz zmiany", saved: "Zapisano!",
+    sub_title: "Subskrypcja", sub_plan: "Plan", sub_status: "Status",
+    sub_status_trialing: "Okres próbny", sub_status_active: "Aktywna", sub_status_canceled: "Anulowana",
+    sub_status_none: "Nie masz aktywnej subskrypcji.",
+    sub_started: "Rozpoczęta", sub_trial_until: "Darmowy okres do", sub_renews: "Odnawia się", sub_ends: "Kończy się",
+    sub_cancel: "Anuluj subskrypcję", sub_cancel_done: "Subskrypcja zostanie anulowana na koniec okresu.",
+    sub_start_btn: "Rozpocznij subskrypcję",
     edit_photos: "Twoje prace", add_photos: "Dodaj zdjęcia", del: "Usuń",
     no_profile: "Nie masz jeszcze profilu artysty.",
     forgot: "Nie pamiętasz hasła?", reset_title: "Reset hasła",
@@ -291,6 +297,12 @@ const I18N = {
     acc_photo: "Profile photo", acc_change_photo: "Change photo", acc_bio: "About me",
     edit_title: "Edit profile",
     edit_sub: "Update your details and work.", save: "Save changes", saved: "Saved!",
+    sub_title: "Subscription", sub_plan: "Plan", sub_status: "Status",
+    sub_status_trialing: "Trial", sub_status_active: "Active", sub_status_canceled: "Canceled",
+    sub_status_none: "You don't have an active subscription.",
+    sub_started: "Started", sub_trial_until: "Free trial until", sub_renews: "Renews", sub_ends: "Ends",
+    sub_cancel: "Cancel subscription", sub_cancel_done: "Subscription will be canceled at the end of the period.",
+    sub_start_btn: "Start subscription",
     edit_photos: "Your work", add_photos: "Add photos", del: "Delete",
     no_profile: "You don't have an artist profile yet.",
     forgot: "Forgot password?", reset_title: "Reset password",
@@ -518,6 +530,10 @@ const css = `
     background: #111; border: 1px solid #1c1c1c; border-radius: 12px; padding: 12px 16px; }
   .admin-row-main { font-size: 14px; font-weight: 600; color: #eee; }
   .admin-row-sub { font-size: 12px; color: #555; margin-top: 2px; word-break: break-all; }
+  .sub-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0;
+    border-bottom: 1px solid #1a1a1a; font-size: 14px; color: #999; }
+  .sub-row:last-of-type { border-bottom: none; }
+  .sub-row b { color: #eee; font-weight: 600; text-align: right; }
   .form-warning { font-size: 12px; color: #f0a868; margin-top: 18px; text-align: right; }
   .form-error { font-size: 13px; color: #f87171; margin-top: 14px; padding: 10px 12px;
     background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.25); border-radius: 10px; }
@@ -1006,7 +1022,7 @@ function RegisterFlow({ onBack, onDone }) {
       const resp = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: form.plan, members: memberCount, email: form.email, origin: window.location.origin }),
+        body: JSON.stringify({ plan: form.plan, members: memberCount, email: form.email, artistId: uid, origin: window.location.origin }),
       });
       const data = await resp.json();
       if (data.url) { window.location.href = data.url; return; }
@@ -2461,6 +2477,48 @@ function EditProfile({ artist, onSaved }) {
     setBusy(false); onSaved();
   };
 
+  const [subBusy, setSubBusy] = useState(false);
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB") : "";
+  const hasSub = artist.stripe_subscription_id && artist.sub_status && artist.sub_status !== "canceled";
+  const planLabel = artist.plan === "studio"
+    ? t("plan_card_studio", { n: artist.members || 2 }) : t("plan_card_solo");
+  const statusLabel = artist.sub_status === "trialing" ? t("sub_status_trialing")
+    : artist.sub_status === "active" ? t("sub_status_active")
+    : artist.sub_status === "canceled" ? t("sub_status_canceled") : artist.sub_status;
+
+  const cancelSub = async () => {
+    setSubBusy(true);
+    try {
+      const r = await fetch("/api/subscription", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", subscription_id: artist.stripe_subscription_id }),
+      });
+      const d = await r.json();
+      if (d.subscription_id) {
+        await supabase.from("artists").update({
+          sub_status: d.status, sub_cancel: true,
+          sub_period_end: d.period_end ? new Date(d.period_end * 1000).toISOString() : artist.sub_period_end,
+        }).eq("id", artist.id);
+        onSaved();
+      }
+    } catch { /* pomiń */ }
+    setSubBusy(false);
+  };
+
+  const startSub = async () => {
+    setSubBusy(true);
+    try {
+      const r = await fetch("/api/create-checkout-session", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: artist.plan || "solo", members: artist.members || 1,
+          email: artist.email, artistId: artist.id, origin: window.location.origin }),
+      });
+      const d = await r.json();
+      if (d.url) { window.location.href = d.url; return; }
+    } catch { /* pomiń */ }
+    setSubBusy(false);
+  };
+
   return (
     <div className="register">
       <h2 style={{ fontSize: 24, marginBottom: 4 }}>{t("edit_title")}</h2>
@@ -2529,6 +2587,35 @@ function EditProfile({ artist, onSaved }) {
           {saved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
           <button className="btn btn-primary" disabled={busy} onClick={saveProfile}>{t("save")}</button>
         </div>
+      </div>
+
+      <div className="reg-card" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("sub_title")}</h2>
+        {hasSub ? (
+          <>
+            <div className="sub-row"><span>{t("sub_plan")}</span><b>{planLabel}</b></div>
+            <div className="sub-row"><span>{t("sub_status")}</span><b>{statusLabel}</b></div>
+            {artist.sub_start && <div className="sub-row"><span>{t("sub_started")}</span><b>{fmtDate(artist.sub_start)}</b></div>}
+            {artist.sub_trial_end && new Date(artist.sub_trial_end) > new Date() &&
+              <div className="sub-row"><span>{t("sub_trial_until")}</span><b>{fmtDate(artist.sub_trial_end)}</b></div>}
+            {artist.sub_period_end &&
+              <div className="sub-row"><span>{artist.sub_cancel ? t("sub_ends") : t("sub_renews")}</span><b>{fmtDate(artist.sub_period_end)}</b></div>}
+            {artist.sub_cancel ? (
+              <div className="form-note-ok" style={{ marginTop: 12 }}>{t("sub_cancel_done")}</div>
+            ) : (
+              <div className="form-actions">
+                <button className="btn btn-danger" disabled={subBusy} onClick={cancelSub}>{t("sub_cancel")}</button>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="muted" style={{ marginBottom: 12 }}>{t("sub_status_none")}</div>
+            <div className="form-actions">
+              <button className="btn btn-primary" disabled={subBusy} onClick={startSub}>{t("sub_start_btn")}</button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="reg-card" style={{ marginTop: 20 }}>
@@ -2819,6 +2906,7 @@ export default function App() {
   const [recovery, setRecovery] = useState(false);
   const [myRole, setMyRole] = useState(null);
   const [payMsg, setPayMsg] = useState(null);
+  const [pendingSid, setPendingSid] = useState(null);
   const [lang, setLangState] = useState(() => {
     try { return localStorage.getItem("usart_lang") || "pl"; } catch { return "pl"; }
   });
@@ -2901,13 +2989,40 @@ export default function App() {
     document.title = profileArtist ? `@${profileArtist.nick} · UsArt` : "UsArt — znajdź artystę";
   }, [profileArtist]);
 
-  // Wynik płatności po powrocie ze Stripe (?platnosc=ok / anulowano)
+  // Wynik płatności po powrocie ze Stripe (?platnosc=ok&sid=... / anulowano)
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get("platnosc");
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("platnosc");
+    const sid = params.get("sid");
     if (p === "ok") setPayMsg("ok");
     else if (p === "anulowano") setPayMsg("cancel");
+    if (sid) setPendingSid(sid);
     if (p) window.history.replaceState({ tab: "search", nick: null }, "", "/");
   }, []);
+
+  // Zapis danych subskrypcji po powrocie ze Stripe (do wiersza zalogowanego artysty)
+  useEffect(() => {
+    if (!pendingSid || !session) return;
+    const ts = (x) => (x ? new Date(x * 1000).toISOString() : null);
+    (async () => {
+      try {
+        const r = await fetch("/api/subscription", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "sync", session_id: pendingSid }),
+        });
+        const d = await r.json();
+        if (d.subscription_id) {
+          await supabase.from("artists").update({
+            stripe_customer_id: d.customer, stripe_subscription_id: d.subscription_id,
+            sub_status: d.status, sub_start: ts(d.start), sub_period_end: ts(d.period_end),
+            sub_trial_end: ts(d.trial_end), sub_cancel: d.cancel_at_period_end,
+          }).eq("id", session.user.id);
+          loadArtists();
+        }
+      } catch { /* pomiń */ }
+      setPendingSid(null);
+    })();
+  }, [pendingSid, session]);
 
   const go = (next, push = true) => {
     setTab(next.tab);
