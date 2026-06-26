@@ -160,6 +160,17 @@ const I18N = {
     reset_send: "Wyślij link", reset_sent: "Sprawdź skrzynkę — wysłaliśmy link do zmiany hasła.",
     back_to_login: "Wróć do logowania", new_password: "Nowe hasło",
     set_password: "Ustaw nowe hasło", pw_changed: "Hasło zmienione!",
+    verified: "Zweryfikowany", views_n: "{n} wyświetleń",
+    fav_add: "Dodaj do ulubionych", fav_remove: "W ulubionych", report: "Zgłoś",
+    report_reason: "Podaj powód zgłoszenia:", reviews_title: "Oceny i opinie",
+    review_ph: "Napisz opinię (opcjonalnie)...", review_submit: "Dodaj opinię",
+    no_reviews: "Brak opinii. Bądź pierwszy!", comments_title: "Komentarze",
+    comment_ph: "Napisz komentarz...", comment_add_photo: "Dodaj zdjęcie",
+    comment_submit: "Dodaj", no_comments: "Brak komentarzy.",
+    login_to_interact: "Zaloguj się, aby oceniać i komentować.",
+    signup_free: "Załóż darmowe konto", signup_title: "Darmowe konto",
+    l_displayname: "Nazwa wyświetlana", signup_btn: "Utwórz konto",
+    have_account: "Masz już konto? Zaloguj się", anon_user: "Użytkownik",
     hero_a: "Znajdź", hero_b: "artystę",
     hero_sub: "Wpisz nick, miasto lub styl — albo użyj filtrów poniżej.",
     search_ph: "np. kraków, fine line, @zuza...",
@@ -232,6 +243,17 @@ const I18N = {
     reset_send: "Send link", reset_sent: "Check your inbox — we sent a reset link.",
     back_to_login: "Back to login", new_password: "New password",
     set_password: "Set new password", pw_changed: "Password changed!",
+    verified: "Verified", views_n: "{n} views",
+    fav_add: "Add to favorites", fav_remove: "In favorites", report: "Report",
+    report_reason: "Describe the reason:", reviews_title: "Ratings & reviews",
+    review_ph: "Write a review (optional)...", review_submit: "Submit review",
+    no_reviews: "No reviews yet. Be the first!", comments_title: "Comments",
+    comment_ph: "Write a comment...", comment_add_photo: "Add photo",
+    comment_submit: "Post", no_comments: "No comments yet.",
+    login_to_interact: "Log in to rate and comment.",
+    signup_free: "Create a free account", signup_title: "Free account",
+    l_displayname: "Display name", signup_btn: "Create account",
+    have_account: "Already have an account? Log in", anon_user: "User",
     hero_a: "Find an", hero_b: "artist",
     hero_sub: "Enter a nickname, city or style — or use the filters below.",
     search_ph: "e.g. krakow, fine line, @zuza...",
@@ -361,6 +383,9 @@ const IconUser   = () => <Ico d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a
 const IconCompass= () => <Ico d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 0v2m0 18v-2m10-10h-2M4 12H2" />;
 const IconCheck  = () => <Ico d="M20 6L9 17l-5-5" />;
 const IconLock   = () => <Ico d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4" size={13} />;
+const IconStar   = ({ fill }) => <Ico d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" size={16} fill={fill} />;
+const IconHeart  = ({ fill }) => <Ico d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" size={15} fill={fill} />;
+const IconFlag   = () => <Ico d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" size={13} />;
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const css = `
@@ -424,6 +449,42 @@ const css = `
     backdrop-filter: blur(4px); border: none; color: #fff; cursor: pointer; border-radius: 7px;
     padding: 5px; display: flex; opacity: 0; transition: opacity .15s; }
   .proj-item:hover .del-photo { opacity: 1; }
+
+  /* ── SOCIAL: badge, oceny, komentarze, ulubione ── */
+  .verified-badge { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;
+    font-size: 11px; font-weight: 600; vertical-align: middle; padding: 3px 8px; border-radius: 20px;
+    background: rgba(74,222,128,.12); border: 1px solid rgba(74,222,128,.3); color: #4ade80; }
+  .verified-badge svg { width: 12px; height: 12px; }
+  .rev-summary { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; color: #aaa; }
+  .stars-display { display: inline-flex; color: #fbbf24; }
+  .profile-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
+  .views-count { font-size: 12px; color: #555; }
+  .fav-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px; border-radius: 8px;
+    font-size: 12px; font-weight: 500; cursor: pointer; background: #161616; border: 1px solid #272727;
+    color: #aaa; transition: all .15s; }
+  .fav-btn:hover { border-color: #e879f9; color: #e879f9; }
+  .fav-btn.on { background: rgba(232,121,249,.12); border-color: #e879f9; color: #e879f9; }
+  .fav-btn.on svg { color: #e879f9; }
+  .mini-link { background: none; border: none; color: #666; font-size: 12px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px; }
+  .mini-link:hover { color: #aaa; }
+  .social-section { max-width: 960px; margin: 0 auto; padding: 8px 0 0; }
+  .review-form, .comment-form { background: #111; border: 1px solid #1c1c1c; border-radius: 14px;
+    padding: 16px; margin-bottom: 16px; }
+  .stars-input { display: flex; gap: 4px; margin-bottom: 10px; color: #fbbf24; }
+  .star-btn { background: none; border: none; cursor: pointer; color: #333; padding: 2px; display: flex; }
+  .star-btn:hover { color: #fbbf24; }
+  .review-form .form-input, .comment-form .form-input { margin-bottom: 10px; }
+  .comment-form-actions { display: flex; gap: 10px; justify-content: space-between; align-items: center; }
+  .social-item { background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 10px; }
+  .social-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+  .social-author { font-size: 13px; font-weight: 600; color: #ddd; }
+  .social-text { font-size: 13px; color: #aaa; line-height: 1.5; }
+  .comment-img { margin-top: 10px; max-width: 180px; border-radius: 10px; cursor: pointer; display: block; }
+  .login-hint { font-size: 13px; color: #666; padding: 12px; background: #0f0f0f;
+    border: 1px solid #1a1a1a; border-radius: 12px; margin-bottom: 16px; text-align: center; }
+  .muted { font-size: 13px; color: #555; padding: 8px 0; }
 
   /* ── HERO ── */
   .hero { padding: 72px 28px 48px; text-align: center; max-width: 680px; margin: 0 auto; }
@@ -783,6 +844,9 @@ function RegisterFlow({ onBack, onDone }) {
         avatar: urls[0] || null, plan: form.plan, members: memberCount,
       });
       if (insErr) throw insErr;
+
+      // Profil konta (rola: artysta)
+      await supabase.from("profiles").upsert({ id: uid, display_name: form.nick, role: "artist" });
 
       // Krok 4 - Prace
       if (urls.length) {
@@ -1275,9 +1339,85 @@ function ArtistCard({ artist: a, onClick }) {
 }
 
 // ─── ARTIST PROFILE ────────────────────────────────────────────────────────────
-function ArtistProfile({ artist: a, onBack }) {
+function ArtistProfile({ artist: a, onBack, session }) {
   const { lang, t } = useLang();
   const [lightbox, setLightbox] = useState(null);
+  const isReal = typeof a.id === "string";
+  const uid = session?.user?.id || null;
+
+  const [reviews, setReviews] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [names, setNames] = useState({});
+  const [fav, setFav] = useState(false);
+  const [myRating, setMyRating] = useState(0);
+  const [myText, setMyText] = useState("");
+  const [cText, setCText] = useState("");
+  const [cFile, setCFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    if (!isReal) return;
+    const { data: rv } = await supabase.from("reviews").select("*").eq("artist_id", a.id);
+    const { data: cm } = await supabase.from("comments").select("*").eq("artist_id", a.id).order("created_at", { ascending: false });
+    setReviews(rv || []); setComments(cm || []);
+    const ids = [...new Set([...(rv || []).map(x => x.user_id), ...(cm || []).map(x => x.user_id)])];
+    if (ids.length) {
+      const { data: pf } = await supabase.from("profiles").select("id,display_name").in("id", ids);
+      const m = {}; (pf || []).forEach(p => { m[p.id] = p.display_name; }); setNames(m);
+    }
+    if (uid) {
+      const mine = (rv || []).find(x => x.user_id === uid);
+      if (mine) { setMyRating(mine.rating); setMyText(mine.text || ""); }
+      const { data: f } = await supabase.from("favorites").select("artist_id").eq("user_id", uid).eq("artist_id", a.id);
+      setFav((f || []).length > 0);
+    }
+  };
+
+  useEffect(() => {
+    if (isReal) { supabase.rpc("increment_views", { aid: a.id }); load(); }
+  }, [a.id]);
+
+  const avg = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+
+  const toggleFav = async () => {
+    if (!uid) return;
+    if (fav) { await supabase.from("favorites").delete().eq("user_id", uid).eq("artist_id", a.id); setFav(false); }
+    else { await supabase.from("favorites").insert({ user_id: uid, artist_id: a.id }); setFav(true); }
+  };
+
+  const submitReview = async () => {
+    if (!uid || !myRating) return;
+    setBusy(true);
+    await supabase.from("reviews").upsert(
+      { artist_id: a.id, user_id: uid, rating: myRating, text: myText || null },
+      { onConflict: "artist_id,user_id" });
+    setBusy(false); load();
+  };
+
+  const submitComment = async () => {
+    if (!uid || (!cText && !cFile)) return;
+    setBusy(true);
+    let img = null;
+    if (cFile) {
+      const path = `comments/${uid}/${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const { error } = await supabase.storage.from("portfolios").upload(path, cFile);
+      if (!error) img = supabase.storage.from("portfolios").getPublicUrl(path).data.publicUrl;
+    }
+    await supabase.from("comments").insert({ artist_id: a.id, user_id: uid, text: cText || null, img });
+    setCText(""); setCFile(null); setBusy(false); load();
+  };
+
+  const delComment = async (id) => { await supabase.from("comments").delete().eq("id", id); load(); };
+
+  const report = async (type, id) => {
+    if (!uid) return;
+    const reason = window.prompt(t("report_reason"));
+    if (reason == null) return;
+    await supabase.from("reports").insert({ reporter: uid, target_type: type, target_id: id, reason });
+  };
+
+  const nameOf = (id) => names[id] || t("anon_user");
+
   return (
     <>
       <div className="profile">
@@ -1285,9 +1425,18 @@ function ArtistProfile({ artist: a, onBack }) {
         <div className="profile-card">
           <img className="profile-avatar" src={a.avatar} alt={a.nick} />
           <div style={{ flex: 1 }}>
-            <div className="profile-name">@{a.nick}</div>
+            <div className="profile-name">
+              @{a.nick}
+              {a.verified && <span className="verified-badge"><IconCheck /> {t("verified")}</span>}
+            </div>
             {a.name && <div className="profile-nick">{a.name}</div>}
             <div className="profile-city"><IconPin /> {a.city}</div>
+            {reviews.length > 0 && (
+              <div className="rev-summary">
+                <span className="stars-display">{[1, 2, 3, 4, 5].map(n => <IconStar key={n} fill={n <= Math.round(avg)} />)}</span>
+                <span>{avg.toFixed(1)} ({reviews.length})</span>
+              </div>
+            )}
             <p className="profile-bio">{tBio(a, lang)}</p>
             <div className="contact-row">
               {a.instagram && (
@@ -1305,8 +1454,20 @@ function ArtistProfile({ artist: a, onBack }) {
             <div className="style-badges">
               {a.styles.map(s => <span className="style-badge" key={s}>{tStyle(s, lang)}</span>)}
             </div>
+            {isReal && (
+              <div className="profile-meta">
+                <span className="views-count">{t("views_n", { n: a.views || 0 })}</span>
+                {uid && (
+                  <button className={`fav-btn ${fav ? "on" : ""}`} onClick={toggleFav}>
+                    <IconHeart fill={fav} /> {fav ? t("fav_remove") : t("fav_add")}
+                  </button>
+                )}
+                {uid && <button className="mini-link" onClick={() => report("artist", a.id)}><IconFlag /> {t("report")}</button>}
+              </div>
+            )}
           </div>
         </div>
+
         <div className="proj-title">{t("projects_n", { n: a.projects.length })}</div>
         <div className="proj-grid">
           {a.projects.map(p => (
@@ -1316,12 +1477,77 @@ function ArtistProfile({ artist: a, onBack }) {
             </div>
           ))}
         </div>
+
+        {isReal && (
+          <>
+            <div className="social-section">
+              <div className="proj-title">{t("reviews_title")}</div>
+              {uid ? (
+                <div className="review-form">
+                  <div className="stars-input">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button key={n} className="star-btn" onClick={() => setMyRating(n)}>
+                        <IconStar fill={n <= myRating} />
+                      </button>
+                    ))}
+                  </div>
+                  <textarea className="form-input" rows={2} placeholder={t("review_ph")}
+                    value={myText} onChange={e => setMyText(e.target.value)} style={{ resize: "vertical" }} />
+                  <button className="btn btn-primary" disabled={busy || !myRating} onClick={submitReview}>
+                    {t("review_submit")}
+                  </button>
+                </div>
+              ) : <div className="login-hint">{t("login_to_interact")}</div>}
+              {reviews.length === 0 ? <div className="muted">{t("no_reviews")}</div> : reviews.map(r => (
+                <div className="social-item" key={r.id}>
+                  <div className="social-head">
+                    <span className="social-author">{nameOf(r.user_id)}</span>
+                    <span className="stars-display">{[1, 2, 3, 4, 5].map(n => <IconStar key={n} fill={n <= r.rating} />)}</span>
+                  </div>
+                  {r.text && <div className="social-text">{r.text}</div>}
+                </div>
+              ))}
+            </div>
+
+            <div className="social-section">
+              <div className="proj-title">{t("comments_title")} ({comments.length})</div>
+              {uid ? (
+                <div className="comment-form">
+                  <textarea className="form-input" rows={2} placeholder={t("comment_ph")}
+                    value={cText} onChange={e => setCText(e.target.value)} style={{ resize: "vertical" }} />
+                  <div className="comment-form-actions">
+                    <label className="btn btn-ghost" style={{ cursor: "pointer" }}>
+                      <input type="file" accept="image/*" hidden onChange={e => setCFile(e.target.files?.[0] || null)} />
+                      {cFile ? "✓ " + cFile.name.slice(0, 14) : t("comment_add_photo")}
+                    </label>
+                    <button className="btn btn-primary" disabled={busy || (!cText && !cFile)} onClick={submitComment}>
+                      {t("comment_submit")}
+                    </button>
+                  </div>
+                </div>
+              ) : <div className="login-hint">{t("login_to_interact")}</div>}
+              {comments.length === 0 ? <div className="muted">{t("no_comments")}</div> : comments.map(c => (
+                <div className="social-item" key={c.id}>
+                  <div className="social-head">
+                    <span className="social-author">{nameOf(c.user_id)}</span>
+                    <span style={{ display: "flex", gap: 10 }}>
+                      <button className="mini-link" onClick={() => report("comment", c.id)}>{t("report")}</button>
+                      {uid === c.user_id && <button className="mini-link" onClick={() => delComment(c.id)}>{t("del")}</button>}
+                    </span>
+                  </div>
+                  {c.text && <div className="social-text">{c.text}</div>}
+                  {c.img && <img className="comment-img" src={c.img} alt="" onClick={() => setLightbox({ img: c.img, title: "" })} />}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
       {lightbox && (
         <div className="lightbox" onClick={() => setLightbox(null)}>
           <button className="lightbox-close" onClick={() => setLightbox(null)}><IconX /></button>
-          <img src={lightbox.img} alt={tTitle(lightbox, lang)} onClick={e => e.stopPropagation()} />
-          <div className="lightbox-caption">{tTitle(lightbox, lang)}</div>
+          <img src={lightbox.img} alt="" onClick={e => e.stopPropagation()} />
+          {lightbox.title && <div className="lightbox-caption">{tTitle(lightbox, lang)}</div>}
         </div>
       )}
     </>
@@ -1422,9 +1648,10 @@ function SearchPage({ onArtist, artists }) {
 // ─── LOGIN MODAL (logowanie + reset hasła) ──────────────────────────────────────
 function LoginModal({ onClose }) {
   const { t } = useLang();
-  const [mode, setMode] = useState("login"); // "login" | "reset"
+  const [mode, setMode] = useState("login"); // "login" | "reset" | "signup"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [sent, setSent] = useState(false);
@@ -1435,6 +1662,20 @@ function LoginModal({ onClose }) {
     setBusy(false);
     if (error) setErr(t("login_error"));
     else onClose();
+  };
+
+  const signup = async () => {
+    setBusy(true); setErr("");
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) { setBusy(false); setErr(error.message); return; }
+    if (data.user) {
+      await supabase.from("profiles").upsert({
+        id: data.user.id, display_name: displayName || email.split("@")[0], role: "user",
+      });
+    }
+    setBusy(false);
+    if (data.session) onClose();
+    else setErr("Wyłącz potwierdzanie e-mail w Supabase, aby od razu się zalogować.");
   };
 
   const sendReset = async () => {
@@ -1448,7 +1689,34 @@ function LoginModal({ onClose }) {
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><IconX /></button>
 
-        {mode === "login" ? (
+        {mode === "signup" ? (
+          <>
+            <h2>{t("signup_title")}</h2>
+            <p>UsArt</p>
+            <div className="form-row">
+              <label className="form-label">{t("l_displayname")}</label>
+              <input className="form-input" value={displayName}
+                onChange={e => setDisplayName(e.target.value)} placeholder={t("ph_optional")} />
+            </div>
+            <div className="form-row">
+              <label className="form-label">{t("l_email")}</label>
+              <input className="form-input" type="email" value={email}
+                onChange={e => setEmail(e.target.value)} placeholder={t("ph_email")} />
+            </div>
+            <div className="form-row">
+              <label className="form-label">{t("l_password")}</label>
+              <input className="form-input" type="password" value={password}
+                onChange={e => setPassword(e.target.value)} placeholder={t("ph_password")} />
+            </div>
+            {err && <div className="form-error">{err}</div>}
+            <button className="btn btn-primary" disabled={busy || !email || password.length < 6} onClick={signup}>
+              {busy ? "…" : t("signup_btn")}
+            </button>
+            <button className="link-btn" onClick={() => { setMode("login"); setErr(""); }}>
+              {t("have_account")}
+            </button>
+          </>
+        ) : mode === "login" ? (
           <>
             <h2>{t("login_title")}</h2>
             <p>UsArt</p>
@@ -1468,6 +1736,9 @@ function LoginModal({ onClose }) {
             </button>
             <button className="link-btn" onClick={() => { setMode("reset"); setErr(""); }}>
               {t("forgot")}
+            </button>
+            <button className="link-btn" onClick={() => { setMode("signup"); setErr(""); }}>
+              {t("signup_free")}
             </button>
           </>
         ) : (
@@ -1771,9 +2042,11 @@ export default function App() {
             </div>
             {session ? (
               <div className="nav-user">
-                <button className="btn btn-ghost" onClick={() => go({ tab: "account" })}>
-                  {t("nav_account")}
-                </button>
+                {myArtist && (
+                  <button className="btn btn-ghost" onClick={() => go({ tab: "account" })}>
+                    {t("nav_account")}
+                  </button>
+                )}
                 <button className="btn btn-ghost" onClick={() => { supabase.auth.signOut(); go({ tab: "search" }); }}>
                   {t("logout")}
                 </button>
@@ -1792,7 +2065,7 @@ export default function App() {
         </nav>
 
         {profileArtist ? (
-          <ArtistProfile artist={profileArtist} onBack={closeArtist} />
+          <ArtistProfile artist={profileArtist} onBack={closeArtist} session={session} />
         ) : tab === "search" ? (
           <SearchPage onArtist={openArtist} artists={artists} />
         ) : tab === "explore" ? (
