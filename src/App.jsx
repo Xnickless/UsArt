@@ -196,6 +196,7 @@ const I18N = {
     signup_free: "Załóż darmowe konto", signup_title: "Darmowe konto",
     l_displayname: "Nazwa wyświetlana", signup_btn: "Utwórz konto",
     have_account: "Masz już konto? Zaloguj się", anon_user: "Użytkownik",
+    pay_ok: "Płatność przyjęta — okres próbny aktywny! 🎉", pay_cancel: "Płatność anulowana.",
     nav_admin: "Panel", admin_title: "Panel administratora",
     admin_reports: "Zgłoszenia", admin_no_reports: "Brak zgłoszeń.",
     admin_artists: "Artyści", admin_del_content: "Usuń treść", admin_dismiss: "Odrzuć",
@@ -250,6 +251,7 @@ const I18N = {
     card_exp: "Ważna do *", ph_exp: "MM / RR", card_cvc: "CVC *",
     pay_today: "Do zapłaty dziś",
     pay_note: "Dziś nie pobieramy żadnej opłaty. Po {m} miesiącach pobierzemy {amt}/mies., chyba że anulujesz wcześniej.",
+    pay_stripe_note: "Dane karty podasz bezpiecznie na stronie Stripe. Dziś 0 zł — po {m} miesiącach {amt}/mies., anuluj kiedy chcesz.",
     start_trial: "Rozpocznij {m} miesiące za darmo ✓",
     success_title: "Profil gotowy!",
     success_sub: "Okres próbny aktywny — {m} miesiące za darmo, potem {amt}/mies.{studio}.",
@@ -307,6 +309,7 @@ const I18N = {
     signup_free: "Create a free account", signup_title: "Free account",
     l_displayname: "Display name", signup_btn: "Create account",
     have_account: "Already have an account? Log in", anon_user: "User",
+    pay_ok: "Payment received — trial active! 🎉", pay_cancel: "Payment canceled.",
     nav_admin: "Admin", admin_title: "Admin panel",
     admin_reports: "Reports", admin_no_reports: "No reports.",
     admin_artists: "Artists", admin_del_content: "Delete content", admin_dismiss: "Dismiss",
@@ -361,6 +364,7 @@ const I18N = {
     card_exp: "Expiry *", ph_exp: "MM / YY", card_cvc: "CVC *",
     pay_today: "Due today",
     pay_note: "No charge today. After {m} months we'll charge {amt}/mo unless you cancel earlier.",
+    pay_stripe_note: "You'll enter card details securely on Stripe. 0 zł today — then {amt}/mo after {m} months, cancel anytime.",
     start_trial: "Start {m} months free ✓",
     success_title: "Profile ready!",
     success_sub: "Trial active — {m} months free, then {amt}/mo{studio}.",
@@ -499,6 +503,12 @@ const css = `
   .btn-primary { background: linear-gradient(135deg, #e879f9, #818cf8); color: #fff; }
   .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
   .nav-action { min-width: 122px; text-align: center; }
+  .pay-banner { display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 12px 18px; font-size: 14px; font-weight: 500; }
+  .pay-banner.ok { background: rgba(74,222,128,.12); color: #4ade80; border-bottom: 1px solid rgba(74,222,128,.25); }
+  .pay-banner.cancel { background: rgba(248,113,113,.1); color: #f87171; border-bottom: 1px solid rgba(248,113,113,.25); }
+  .pay-banner button { background: none; border: none; color: inherit; cursor: pointer; display: flex; opacity: .7; }
+  .pay-banner button:hover { opacity: 1; }
   .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .btn:disabled:hover { opacity: .4; transform: none; }
   .btn-danger { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
@@ -927,7 +937,7 @@ function RegisterFlow({ onBack, onDone }) {
     if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && pwMatch;
     if (s === 1) return form.city.trim() && form.category && form.styles.length > 0;
     if (s === 2) return form.photos.length >= 2;
-    if (s === 3) return form.cardName.trim() && form.cardNumber.trim() && form.cardExp.trim() && form.cardCvc.trim();
+    if (s === 3) return true;
     return true;
   };
 
@@ -991,7 +1001,16 @@ function RegisterFlow({ onBack, onDone }) {
           urls.map((img, i) => ({ artist_id: uid, title: `${form.nick} #${i + 1}`, img }))
         );
       }
-      setDone(true);
+
+      // Krok 5 - Płatność: przekierowanie do Stripe Checkout (2 mies. za darmo)
+      const resp = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: form.plan, members: memberCount, email: form.email, origin: window.location.origin }),
+      });
+      const data = await resp.json();
+      if (data.url) { window.location.href = data.url; return; }
+      throw new Error(data.error || "Płatność chwilowo niedostępna.");
     } catch (e) {
       if (e.message === "no_session")
         setError("Wyłącz potwierdzanie e-mail w Supabase (Authentication → Sign In / Providers → Email).");
@@ -1261,35 +1280,12 @@ function RegisterFlow({ onBack, onDone }) {
               </ul>
             </div>
 
-            <div className="form-row">
-              <label className="form-label">{t("card_name")}</label>
-              <input className="form-input" placeholder={t("ph_card_name")} value={form.cardName}
-                onChange={e => update("cardName", e.target.value)} />
-            </div>
-            <div className="form-row">
-              <label className="form-label">{t("card_number")}</label>
-              <input className="form-input" placeholder="0000 0000 0000 0000" inputMode="numeric" value={form.cardNumber}
-                onChange={e => update("cardNumber", e.target.value)} />
-            </div>
-            <div className="pay-grid">
-              <div className="form-row">
-                <label className="form-label">{t("card_exp")}</label>
-                <input className="form-input" placeholder={t("ph_exp")} value={form.cardExp}
-                  onChange={e => update("cardExp", e.target.value)} />
-              </div>
-              <div className="form-row">
-                <label className="form-label">{t("card_cvc")}</label>
-                <input className="form-input" placeholder="123" inputMode="numeric" value={form.cardCvc}
-                  onChange={e => update("cardCvc", e.target.value)} />
-              </div>
-            </div>
-
             <div className="pay-total">
               <span>{t("pay_today")}</span>
               <b>0,00 zł</b>
             </div>
             <div className="pay-note">
-              <IconLock /> {t("pay_note", { m: TRIAL_MONTHS, amt: zl(monthlyTotal) })}
+              <IconLock /> {t("pay_stripe_note", { m: TRIAL_MONTHS, amt: zl(monthlyTotal) })}
             </div>
           </>
         )}
@@ -2822,6 +2818,7 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [recovery, setRecovery] = useState(false);
   const [myRole, setMyRole] = useState(null);
+  const [payMsg, setPayMsg] = useState(null);
   const [lang, setLangState] = useState(() => {
     try { return localStorage.getItem("usart_lang") || "pl"; } catch { return "pl"; }
   });
@@ -2904,6 +2901,14 @@ export default function App() {
     document.title = profileArtist ? `@${profileArtist.nick} · UsArt` : "UsArt — znajdź artystę";
   }, [profileArtist]);
 
+  // Wynik płatności po powrocie ze Stripe (?platnosc=ok / anulowano)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("platnosc");
+    if (p === "ok") setPayMsg("ok");
+    else if (p === "anulowano") setPayMsg("cancel");
+    if (p) window.history.replaceState({ tab: "search", nick: null }, "", "/");
+  }, []);
+
   const go = (next, push = true) => {
     setTab(next.tab);
     setProfileArtist(next.artist || null);
@@ -2973,6 +2978,13 @@ export default function App() {
             )}
           </div>
         </nav>
+
+        {payMsg && (
+          <div className={`pay-banner ${payMsg === "ok" ? "ok" : "cancel"}`}>
+            <span>{payMsg === "ok" ? t("pay_ok") : t("pay_cancel")}</span>
+            <button onClick={() => setPayMsg(null)}><IconX /></button>
+          </div>
+        )}
 
         {profileArtist ? (
           <ArtistProfile artist={profileArtist} onBack={closeArtist} session={session} />
