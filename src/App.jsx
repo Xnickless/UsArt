@@ -498,6 +498,7 @@ const css = `
   .btn-ghost:hover { background: #1a1a1a; color: #ddd; }
   .btn-primary { background: linear-gradient(135deg, #e879f9, #818cf8); color: #fff; }
   .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+  .nav-action { min-width: 122px; text-align: center; }
   .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .btn:disabled:hover { opacity: .4; transform: none; }
   .btn-danger { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
@@ -876,6 +877,7 @@ const css = `
     .nav-logo { flex: 0 0 auto; font-size: 20px; }
     .nav-right { flex: 0 0 auto; gap: 6px; }
     .nav-right .btn { padding: 6px 11px; font-size: 12px; }
+    .nav-action { min-width: 0; flex: 1; }
     .lang-switch button { padding: 4px 7px; font-size: 11px; }
     .nav-tabs { order: 3; flex: 1 1 100%; justify-content: flex-start; gap: 6px;
       overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
@@ -2961,11 +2963,11 @@ export default function App() {
               </div>
             ) : (
               <>
-                <button className="btn btn-ghost" onClick={() => setShowLogin(true)}>
+                <button className="btn btn-ghost nav-action" onClick={() => setShowLogin(true)}>
                   {t("login")}
                 </button>
-                <button className="btn btn-primary" onClick={() => go({ tab: "register" })}>
-                  <IconUser style={{ display: "inline", marginRight: 4 }} /> {t("join")}
+                <button className="btn btn-primary nav-action" onClick={() => go({ tab: "register" })}>
+                  {t("join")}
                 </button>
               </>
             )}
