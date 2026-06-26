@@ -872,10 +872,24 @@ const css = `
     border: none; color: #fff; cursor: pointer; border-radius: 8px; padding: 7px; display: flex; }
 
   @media (max-width: 640px) {
-    .nav-tabs { display: none; }
-    .profile-card { flex-direction: column; align-items: center; text-align: center; }
+    .nav { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 8px; }
+    .nav-logo { flex: 0 0 auto; font-size: 20px; }
+    .nav-right { flex: 0 0 auto; gap: 6px; }
+    .nav-right .btn { padding: 6px 11px; font-size: 12px; }
+    .lang-switch button { padding: 4px 7px; font-size: 11px; }
+    .nav-tabs { order: 3; flex: 1 1 100%; justify-content: flex-start; gap: 6px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+    .nav-tab { white-space: nowrap; }
+
+    .hero { padding-left: 16px; padding-right: 16px; }
+    .filters-panel, .stats, .grid, .explore, .works-grid, .profile, .register {
+      padding-left: 16px; padding-right: 16px; }
+    .grid, .works-grid { gap: 12px; }
+    .profile-card { flex-direction: column; align-items: center; text-align: center; padding: 22px; }
     .contact-row, .style-badges { justify-content: center; }
-    .profile-city { justify-content: center; }
+    .profile-city, .rev-summary, .profile-meta { justify-content: center; flex-wrap: wrap; }
+    .reg-choice { grid-template-columns: 1fr; }
+    .other-pop { width: 280px; }
   }
 `;
 
@@ -1960,26 +1974,30 @@ function ArtistMatcher({ artists, onArtist }) {
 
 // ─── FILTR MIAST (miasta z artystami + "Inne" z rozwijanym okienkiem) ───────────
 function CityFilter({ cities, value, onChange }) {
+  // value: tablica wybranych miast ([] = wszystkie)
   const { t } = useLang();
   const [open, setOpen] = useState(false);
   const others = [...REGISTER_CITIES].sort((a, b) => a.localeCompare(b, "pl")).filter(c => !cities.includes(c));
-  const selectedOther = value !== "Wszystkie" && !cities.includes(value);
+  const toggle = (c) => onChange(value.includes(c) ? value.filter(x => x !== c) : [...value, c]);
+  const selectedOthers = value.filter(c => !cities.includes(c));
 
   return (
     <div className="filter-row">
       <span className="filter-label">{t("f_city")}</span>
-      <button className={`chip ${value === "Wszystkie" ? "active" : ""}`} onClick={() => onChange("Wszystkie")}>{t("all")}</button>
+      <button className={`chip ${value.length === 0 ? "active" : ""}`} onClick={() => onChange([])}>{t("all")}</button>
       {cities.map(c => (
-        <button key={c} className={`chip ${value === c ? "active" : ""}`} onClick={() => onChange(c)}>{c}</button>
+        <button key={c} className={`chip ${value.includes(c) ? "active" : ""}`} onClick={() => toggle(c)}>{c}</button>
       ))}
-      {selectedOther && <button className="chip active" onClick={() => onChange(value)}>{value}</button>}
+      {selectedOthers.map(c => (
+        <button key={c} className="chip active" onClick={() => toggle(c)}>{c}</button>
+      ))}
       <div className="other-wrap" onMouseLeave={() => setOpen(false)}>
         <button className="chip" onClick={() => setOpen(o => !o)}>{t("city_other")} ▾</button>
         {open && (
           <div className="other-pop">
             {others.map(c => (
-              <button key={c} className={`chip ${value === c ? "active" : ""}`}
-                onClick={() => { onChange(c); setOpen(false); }}>{c}</button>
+              <button key={c} className={`chip ${value.includes(c) ? "active" : ""}`}
+                onClick={() => toggle(c)}>{c}</button>
             ))}
           </div>
         )}
@@ -1993,7 +2011,7 @@ function WorksFeed({ artists, onArtist }) {
   const { lang, t } = useLang();
   const [catF, setCatF] = useState("Wszystkie");
   const [styleF, setStyleF] = useState("Wszystkie");
-  const [cityF, setCityF] = useState("Wszystkie");
+  const [cityF, setCityF] = useState([]);
 
   const cities = [...new Set(artists.map(a => a.city))].sort();
   const availableStyles = catF === "Tatuaż"
@@ -2005,7 +2023,7 @@ function WorksFeed({ artists, onArtist }) {
     const a = w.artist;
     const mc = catF === "Wszystkie" || a.categories.includes(catF);
     const ms = styleF === "Wszystkie" || a.styles.includes(styleF);
-    const mt = cityF === "Wszystkie" || a.city === cityF;
+    const mt = cityF.length === 0 || cityF.includes(a.city);
     return mc && ms && mt;
   });
 
@@ -2060,7 +2078,7 @@ function WorksFeed({ artists, onArtist }) {
 function SearchPage({ onArtist, artists }) {
   const { lang, t } = useLang();
   const [q, setQ] = useState("");
-  const [cityF, setCityF] = useState("Wszystkie");
+  const [cityF, setCityF] = useState([]);
   const [catF, setCatF] = useState("Wszystkie");
   const [styleF, setStyleF] = useState("Wszystkie");
 
@@ -2076,7 +2094,7 @@ function SearchPage({ onArtist, artists }) {
       || a.city.toLowerCase().includes(lq)
       || a.styles.some(s => s.toLowerCase().includes(lq))
       || a.categories.some(c => c.toLowerCase().includes(lq));
-    const mc = cityF === "Wszystkie" || a.city === cityF;
+    const mc = cityF.length === 0 || cityF.includes(a.city);
     const mk = catF === "Wszystkie" || a.categories.includes(catF);
     const mst = styleF === "Wszystkie" || a.styles.includes(styleF);
     return ms && mc && mk && mst;
@@ -2849,6 +2867,7 @@ export default function App() {
     const onPop = (e) => {
       const st = e.state || {};
       setTab(st.tab || "search");
+      window.scrollTo(0, 0);
       if (st.nick) {
         const a = artistsRef.current.find(x => x.nick === st.nick);
         if (a) setProfileArtist(a); else { setProfileArtist(null); setPendingNick(st.nick); }
@@ -2886,6 +2905,7 @@ export default function App() {
   const go = (next, push = true) => {
     setTab(next.tab);
     setProfileArtist(next.artist || null);
+    window.scrollTo(0, 0);
     const url = next.artist ? "/" + next.artist.nick : (TAB_PATHS[next.tab] || "/");
     const state = { tab: next.tab, nick: next.artist ? next.artist.nick : null };
     if (push) window.history.pushState(state, "", url);
