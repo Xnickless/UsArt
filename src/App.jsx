@@ -631,7 +631,7 @@ const css = `
   .chip:hover { border-color: #383838; color: #bbb; }
   .chip.active { background: linear-gradient(135deg, #e879f9, #818cf8); border-color: transparent; color: #fff; }
   .other-wrap { position: relative; display: inline-block; }
-  .other-pop { position: absolute; top: 100%; left: 0; margin-top: 6px; z-index: 50;
+  .other-pop { position: absolute; top: 100%; left: 0; margin-top: 0; z-index: 50;
     width: 340px; max-width: 80vw; max-height: 300px; overflow-y: auto; background: #141414;
     border: 1px solid #2a2a2a; border-radius: 12px; padding: 12px;
     display: flex; flex-wrap: wrap; gap: 6px; box-shadow: 0 14px 36px rgba(0,0,0,.55); }
