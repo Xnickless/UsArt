@@ -176,7 +176,8 @@ const I18N = {
     l_ig: "Instagram", ph_ig: "@nick (bez małpy)",
     fill_required: "Uzupełnij wymagane pola oznaczone *",
     profile_title: "Twój profil artystyczny", profile_sub: "Te informacje zobaczą osoby szukające artystów.",
-    l_city: "Miasto *", city_other_ph: "Nie ma Twojego miasta? Wpisz je tutaj...",
+    l_city: "Miasto *", city_select: "Wybierz miasto z listy...",
+    city_other_ph: "Nie ma Twojego miasta? Wpisz je tutaj...",
     l_cat: "Kategoria *", l_style: "Styl *", chosen: "Wybrano:",
     l_bio: "Bio / Opis", ph_bio: "Kilka słów o Tobie i Twojej twórczości...",
     photos_title: "Dodaj swoje prace", photos_sub: "Wgraj zdjęcia projektów — minimum 2, maksimum 12.",
@@ -238,7 +239,8 @@ const I18N = {
     l_ig: "Instagram", ph_ig: "@handle (without @)",
     fill_required: "Fill in the required fields marked *",
     profile_title: "Your artist profile", profile_sub: "This information is shown to people searching for artists.",
-    l_city: "City *", city_other_ph: "Can't find your city? Type it here...",
+    l_city: "City *", city_select: "Select a city from the list...",
+    city_other_ph: "Can't find your city? Type it here...",
     l_cat: "Category *", l_style: "Style *", chosen: "Selected:",
     l_bio: "Bio / Description", ph_bio: "A few words about you and your work...",
     photos_title: "Add your work", photos_sub: "Upload project photos — minimum 2, maximum 12.",
@@ -569,8 +571,12 @@ const css = `
   .pw-match { font-size: 12px; margin-top: 6px; }
   .pw-match.ok { color: #4ade80; }
   .pw-match.bad { color: #f87171; }
-  .upload-zone { border: 2px dashed #252525; border-radius: 12px; padding: 36px 24px;
+  .upload-zone { display: block; border: 2px dashed #252525; border-radius: 12px; padding: 36px 24px;
     text-align: center; cursor: pointer; transition: all .2s; color: #444; }
+  .form-select { appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 38px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23818cf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; }
+  .form-select option { background: #141414; color: #f0f0f0; }
   .upload-zone:hover { border-color: #818cf8; color: #818cf8; background: rgba(129,140,248,.04); }
   .upload-zone svg { margin: 0 auto 10px; display: block; }
   .upload-zone p { font-size: 13px; margin-bottom: 4px; color: #777; }
@@ -870,16 +876,16 @@ function RegisterFlow({ onBack, onDone }) {
             {/* MIASTO — chipsy */}
             <div className="form-row">
               <label className="form-label">{t("l_city")}</label>
-              <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 10 }}>
-                {REGISTER_CITIES.map(c => (
-                  <button key={c} onClick={() => update("city", c)}
-                    className={`chip ${form.city === c ? "active" : ""}`}
-                    style={{ fontSize: 12 }}>
-                    {c}
-                  </button>
+              <select className="form-input form-select"
+                value={REGISTER_CITIES.includes(form.city) ? form.city : ""}
+                onChange={e => update("city", e.target.value)}>
+                <option value="">{t("city_select")}</option>
+                {[...REGISTER_CITIES].sort((a, b) => a.localeCompare(b, "pl")).map(c => (
+                  <option key={c} value={c}>{c}</option>
                 ))}
-              </div>
-              <input className="form-input" placeholder={t("city_other_ph")} value={form.city}
+              </select>
+              <input className="form-input" style={{ marginTop: 10 }} placeholder={t("city_other_ph")}
+                value={REGISTER_CITIES.includes(form.city) ? "" : form.city}
                 onChange={e => update("city", e.target.value)} />
             </div>
 
