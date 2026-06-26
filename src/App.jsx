@@ -594,6 +594,16 @@ const css = `
   .social-text { font-size: 13px; color: #aaa; line-height: 1.5; }
   .comment-img { margin-top: 10px; max-width: 180px; border-radius: 10px; cursor: pointer; display: block; }
   .comment-avatar { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 1px solid #2a2a2a; }
+  .like-badge { position: absolute; bottom: 8px; left: 8px; z-index: 2; display: flex; align-items: center;
+    gap: 5px; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); border: none; color: #fff;
+    cursor: pointer; border-radius: 20px; padding: 5px 10px; font-size: 12px; font-weight: 600; transition: color .15s; }
+  .like-badge:hover { color: #e879f9; }
+  .like-badge.on { color: #e879f9; }
+  .like-badge svg { width: 14px; height: 14px; }
+  .lightbox-like { position: absolute; bottom: 34px; left: 24px; display: flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,.1); border: none; color: #fff; cursor: pointer; border-radius: 9px;
+    padding: 9px 15px; font-size: 14px; font-weight: 600; }
+  .lightbox-like.on { color: #e879f9; }
   .login-hint { font-size: 13px; color: #666; padding: 12px; background: #0f0f0f;
     border: 1px solid #1a1a1a; border-radius: 12px; margin-bottom: 16px; text-align: center; }
   .muted { font-size: 13px; color: #555; padding: 8px 0; }
@@ -1601,6 +1611,7 @@ function ArtistProfile({ artist: a, onBack, session }) {
   const [comments, setComments] = useState([]);
   const [names, setNames] = useState({});
   const [fav, setFav] = useState(false);
+  const [likes, setLikes] = useState({});
   const [myRating, setMyRating] = useState(0);
   const [myText, setMyText] = useState("");
   const [cText, setCText] = useState("");
@@ -1623,6 +1634,26 @@ function ArtistProfile({ artist: a, onBack, session }) {
       const { data: f } = await supabase.from("favorites").select("artist_id").eq("user_id", uid).eq("artist_id", a.id);
       setFav((f || []).length > 0);
     }
+    // Polubienia zdjęć
+    const pids = (a.projects || []).map(p => p.id);
+    if (pids.length) {
+      const { data: lk } = await supabase.from("photo_likes").select("project_id,user_id").in("project_id", pids);
+      const map = {};
+      (lk || []).forEach(l => {
+        if (!map[l.project_id]) map[l.project_id] = { count: 0, mine: false };
+        map[l.project_id].count++;
+        if (l.user_id === uid) map[l.project_id].mine = true;
+      });
+      setLikes(map);
+    }
+  };
+
+  const toggleLike = async (pid) => {
+    if (!uid) return;
+    const cur = likes[pid] || { count: 0, mine: false };
+    setLikes(prev => ({ ...prev, [pid]: { count: cur.count + (cur.mine ? -1 : 1), mine: !cur.mine } }));
+    if (cur.mine) await supabase.from("photo_likes").delete().eq("user_id", uid).eq("project_id", pid);
+    else await supabase.from("photo_likes").insert({ user_id: uid, project_id: pid });
   };
 
   useEffect(() => {
@@ -1724,6 +1755,12 @@ function ArtistProfile({ artist: a, onBack, session }) {
             <div className="proj-item" key={p.id} onClick={() => setLightbox(p)}>
               <img src={p.img} alt={tTitle(p, lang)} />
               <div className="proj-overlay"><span className="proj-name">{tTitle(p, lang)}</span></div>
+              {isReal && (
+                <button className={`like-badge ${likes[p.id]?.mine ? "on" : ""}`}
+                  onClick={(e) => { e.stopPropagation(); toggleLike(p.id); }}>
+                  <IconHeart fill={likes[p.id]?.mine} /> {likes[p.id]?.count || 0}
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -1801,6 +1838,12 @@ function ArtistProfile({ artist: a, onBack, session }) {
           <button className="lightbox-close" onClick={() => setLightbox(null)}><IconX /></button>
           <img src={lightbox.img} alt="" onClick={e => e.stopPropagation()} />
           {lightbox.title && <div className="lightbox-caption">{tTitle(lightbox, lang)}</div>}
+          {isReal && lightbox.id && (
+            <button className={`lightbox-like ${likes[lightbox.id]?.mine ? "on" : ""}`}
+              onClick={e => { e.stopPropagation(); toggleLike(lightbox.id); }}>
+              <IconHeart fill={likes[lightbox.id]?.mine} /> {likes[lightbox.id]?.count || 0}
+            </button>
+          )}
         </div>
       )}
     </>
