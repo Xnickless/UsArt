@@ -21,6 +21,7 @@ export default async function handler(req, res) {
       ? `UsArt Studio (${members} artystów)` : "UsArt Artysta solo";
 
     const origin = body.origin || `https://${req.headers.host}`;
+    const artistId = body.artistId || "";
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -33,9 +34,10 @@ export default async function handler(req, res) {
         },
         quantity: 1,
       }],
-      subscription_data: { trial_period_days: TRIAL_DAYS },
+      subscription_data: { trial_period_days: TRIAL_DAYS, metadata: { artist_id: artistId } },
+      metadata: { artist_id: artistId },
       customer_email: body.email || undefined,
-      success_url: `${origin}/?platnosc=ok`,
+      success_url: `${origin}/?platnosc=ok&sid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/?platnosc=anulowano`,
     });
 
