@@ -148,7 +148,11 @@ const fromDb = (a) => ({
 const I18N = {
   pl: {
     nav_search: "Szukaj", nav_explore: "Odkrywaj", nav_works: "Prace", nav_match: "Dobierz", nav_map: "Mapa",
-    map_title: "Mapa artystów", map_sub: "Kliknij miasto na mapie, aby zobaczyć artystów.",
+    map_title: "Mapa artystów", map_sub: "Kliknij miasto lub punkt na mapie, aby zobaczyć artystów.",
+    loc_title: "Lokalizacja na mapie", loc_sub: "Opcjonalnie — wpisz adres studia i znajdź go na mapie. Możesz dopręcyzować pinezką.",
+    loc_address: "Adres studia", loc_find: "Znajdź", loc_clear: "Usuń lokalizację",
+    loc_hint: "Kliknij mapę lub przeciągnij pinezkę, aby ustawić dokładne miejsce.",
+    loc_not_found: "Nie znaleziono adresu — spróbuj inaczej lub ustaw pinezkę ręcznie.",
     works_title: "Prace", works_sub: "Przeglądaj wszystkie prace artystów — kliknij, by zobaczyć profil.",
     match_title: "Dobierz artystę", match_sub: "Odpowiedz na kilka pytań, a pokażemy pasujących artystów.",
     match_q_cat: "Czego szukasz?", match_q_style: "Jaki styl Cię interesuje?",
@@ -238,7 +242,11 @@ const I18N = {
   },
   en: {
     nav_search: "Search", nav_explore: "Explore", nav_works: "Work", nav_match: "Match", nav_map: "Map",
-    map_title: "Artist map", map_sub: "Click a city on the map to see its artists.",
+    map_title: "Artist map", map_sub: "Click a city or pin on the map to see its artists.",
+    loc_title: "Map location", loc_sub: "Optional — enter your studio address and find it on the map. Fine-tune with the pin.",
+    loc_address: "Studio address", loc_find: "Find", loc_clear: "Remove location",
+    loc_hint: "Click the map or drag the pin to set the exact spot.",
+    loc_not_found: "Address not found — try again or place the pin manually.",
     works_title: "Work", works_sub: "Browse all artists' work — click to see the profile.",
     match_title: "Find your artist", match_sub: "Answer a few questions and we'll show matching artists.",
     match_q_cat: "What are you looking for?", match_q_style: "Which style interests you?",
@@ -525,6 +533,8 @@ const css = `
   .map-box { height: 460px; border-radius: 16px; overflow: hidden; border: 1px solid #1c1c1c;
     margin-bottom: 24px; z-index: 0; background: #0d0d0d; }
   .map-box .leaflet-container { height: 100%; width: 100%; background: #0d0d0d; font-family: inherit; }
+  .loc-map { height: 280px; border-radius: 12px; overflow: hidden; border: 1px solid #222; z-index: 0; background: #0d0d0d; }
+  .loc-map .leaflet-container { height: 100%; width: 100%; background: #0d0d0d; font-family: inherit; }
 
   /* ── WORKS FEED ── */
   .works-grid { max-width: 1160px; margin: 0 auto; padding: 0 28px 80px;
@@ -1635,12 +1645,22 @@ function MapView({ artists, onArtist }) {
     if (!L || !layerRef.current) return;
     layerRef.current.clearLayers();
     const counts = {};
-    artists.forEach(a => { counts[a.city] = (counts[a.city] || 0) + 1; });
+    artists.forEach(a => {
+      if (a.lat && a.lng) {
+        // dokładny punkt (artysta/studio ustawił adres)
+        const m = L.circleMarker([a.lat, a.lng], { radius: 7,
+          color: "#fff", weight: 2, fillColor: "#e879f9", fillOpacity: .95 });
+        m.addTo(layerRef.current).bindTooltip(`@${a.nick}${a.address ? " · " + a.address : ""}`);
+        m.on("click", () => onArtist(a));
+      } else {
+        counts[a.city] = (counts[a.city] || 0) + 1;
+      }
+    });
     Object.entries(counts).forEach(([city, n]) => {
       const c = CITY_COORDS[city];
       if (!c) return;
       const m = L.circleMarker(c, { radius: 7 + Math.min(n * 2, 14),
-        color: "#818cf8", weight: 2, fillColor: "#e879f9", fillOpacity: .65 });
+        color: "#818cf8", weight: 2, fillColor: "#818cf8", fillOpacity: .5 });
       m.addTo(layerRef.current).bindTooltip(`${city} (${n})`);
       m.on("click", () => setSelCity(city));
     });
@@ -2113,17 +2133,100 @@ function ResetPasswordModal({ onClose }) {
   );
 }
 
+// ─── WYBÓR LOKALIZACJI NA MAPIE (adres + pinezka) ───────────────────────────────
+function LocationPicker({ value, onChange }) {
+  const { t } = useLang();
+  const elRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const [address, setAddress] = useState(value.address || "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const setMarker = (latlng) => {
+    const L = window.L;
+    if (markerRef.current) markerRef.current.setLatLng(latlng);
+    else {
+      markerRef.current = L.marker(latlng, { draggable: true }).addTo(mapRef.current);
+      markerRef.current.on("dragend", () => {
+        const p = markerRef.current.getLatLng();
+        onChange({ address, lat: p.lat, lng: p.lng });
+      });
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLeaflet().then(L => {
+      if (cancelled || mapRef.current || !elRef.current) return;
+      const has = value.lat && value.lng;
+      const map = L.map(elRef.current).setView(has ? [value.lat, value.lng] : [52.1, 19.4], has ? 14 : 5);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        { attribution: "© OpenStreetMap, © CARTO", maxZoom: 18 }).addTo(map);
+      mapRef.current = map;
+      if (has) setMarker([value.lat, value.lng]);
+      map.on("click", (e) => {
+        setMarker([e.latlng.lat, e.latlng.lng]);
+        onChange({ address, lat: e.latlng.lat, lng: e.latlng.lng });
+      });
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const geocode = async () => {
+    if (!address) return;
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pl&q=${encodeURIComponent(address)}`);
+      const d = await r.json();
+      if (d && d[0]) {
+        const lat = parseFloat(d[0].lat), lng = parseFloat(d[0].lon);
+        mapRef.current.setView([lat, lng], 15);
+        setMarker([lat, lng]);
+        onChange({ address, lat, lng });
+      } else setErr(t("loc_not_found"));
+    } catch { setErr(t("loc_not_found")); }
+    setBusy(false);
+  };
+
+  const clear = () => {
+    if (markerRef.current) { mapRef.current.removeLayer(markerRef.current); markerRef.current = null; }
+    setAddress("");
+    onChange({ address: "", lat: null, lng: null });
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <input className="form-input" placeholder={t("loc_address")} value={address}
+          onChange={e => { setAddress(e.target.value); onChange({ address: e.target.value, lat: value.lat, lng: value.lng }); }} />
+        <button className="btn btn-primary" disabled={busy || !address} onClick={geocode}>
+          {busy ? "…" : t("loc_find")}
+        </button>
+      </div>
+      {err && <div className="form-error" style={{ marginBottom: 10 }}>{err}</div>}
+      <div ref={elRef} className="loc-map" />
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+        <span style={{ fontSize: 11, color: "#555" }}>{t("loc_hint")}</span>
+        {(value.lat && value.lng) ? <button className="mini-link" onClick={clear}>{t("loc_clear")}</button> : null}
+      </div>
+    </div>
+  );
+}
+
 // ─── EDYCJA PROFILU (zalogowany artysta) ────────────────────────────────────────
 function EditProfile({ artist, onSaved }) {
   const { lang, t } = useLang();
   const [form, setForm] = useState({
     name: artist.name || "", city: artist.city || "", category: artist.category || "",
     styles: artist.styles || [], bio: artist.bio || "", instagram: artist.instagram || "",
+    address: artist.address || "", lat: artist.lat || null, lng: artist.lng || null,
   });
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const update = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
+  const setLoc = (loc) => { setForm(f => ({ ...f, ...loc })); setSaved(false); };
   const toggleStyle = (s) => update("styles",
     form.styles.includes(s) ? form.styles.filter(x => x !== s) : [...form.styles, s]);
   const availableStyles = form.category === "Tatuaż"
@@ -2134,6 +2237,7 @@ function EditProfile({ artist, onSaved }) {
     await supabase.from("artists").update({
       name: form.name || null, city: form.city, category: form.category,
       styles: form.styles, bio: form.bio || null, instagram: form.instagram || null,
+      address: form.address || null, lat: form.lat, lng: form.lng,
     }).eq("id", artist.id);
     setBusy(false); setSaved(true);
     onSaved();
@@ -2215,6 +2319,15 @@ function EditProfile({ artist, onSaved }) {
           <textarea className="form-input" rows={3} value={form.bio}
             onChange={e => update("bio", e.target.value)} style={{ resize: "vertical" }} />
         </div>
+
+        <div className="form-row">
+          <label className="form-label">{t("loc_title")}</label>
+          <div className="form-hint" style={{ marginBottom: 12 }}>{t("loc_sub")}</div>
+          <LocationPicker
+            value={{ address: form.address, lat: form.lat, lng: form.lng }}
+            onChange={setLoc} />
+        </div>
+
         <div className="form-actions">
           {saved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
           <button className="btn btn-primary" disabled={busy} onClick={saveProfile}>{t("save")}</button>
