@@ -1425,10 +1425,7 @@ function ArtistProfile({ artist: a, onBack, session }) {
         <div className="profile-card">
           <img className="profile-avatar" src={a.avatar} alt={a.nick} />
           <div style={{ flex: 1 }}>
-            <div className="profile-name">
-              @{a.nick}
-              {a.verified && <span className="verified-badge"><IconCheck /> {t("verified")}</span>}
-            </div>
+            <div className="profile-name">@{a.nick}</div>
             {a.name && <div className="profile-nick">{a.name}</div>}
             <div className="profile-city"><IconPin /> {a.city}</div>
             {reviews.length > 0 && (
