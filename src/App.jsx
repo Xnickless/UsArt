@@ -158,7 +158,11 @@ const I18N = {
     match_q_cat: "Czego szukasz?", match_q_style: "Jaki styl Cię interesuje?",
     match_q_city: "W jakim mieście?", match_any: "Dowolne",
     match_results: "Pasujący artyści", match_restart: "Zacznij od nowa",
-    login: "Zaloguj się", join: "Dołącz jako artysta",
+    login: "Zaloguj się", join: "Zarejestruj się",
+    reg_choose: "Jak chcesz dołączyć?",
+    reg_as_artist: "Jako artysta", reg_as_artist_d: "Załóż profil, dodaj prace i bądź widoczny w katalogu.",
+    reg_as_user: "Jako użytkownik", reg_as_user_d: "Darmowe konto — oceniaj, komentuj i zapisuj ulubionych.",
+    user_signup_title: "Rejestracja użytkownika", user_signup_sub: "Darmowe konto użytkownika.",
     logout: "Wyloguj", login_title: "Zaloguj się", login_btn: "Zaloguj",
     login_error: "Błędny e-mail lub hasło.", submitting: "Tworzę konto...",
     err_taken: "Ten nick lub e-mail jest już zajęty.",
@@ -182,6 +186,9 @@ const I18N = {
     signup_free: "Załóż darmowe konto", signup_title: "Darmowe konto",
     l_displayname: "Nazwa wyświetlana", signup_btn: "Utwórz konto",
     have_account: "Masz już konto? Zaloguj się", anon_user: "Użytkownik",
+    nav_admin: "Panel", admin_title: "Panel administratora",
+    admin_reports: "Zgłoszenia", admin_no_reports: "Brak zgłoszeń.",
+    admin_artists: "Artyści", admin_del_content: "Usuń treść", admin_dismiss: "Odrzuć",
     hero_a: "Znajdź", hero_b: "artystę",
     hero_sub: "Wpisz nick, miasto lub styl — albo użyj filtrów poniżej.",
     search_ph: "np. kraków, fine line, @zuza...",
@@ -252,7 +259,11 @@ const I18N = {
     match_q_cat: "What are you looking for?", match_q_style: "Which style interests you?",
     match_q_city: "In which city?", match_any: "Any",
     match_results: "Matching artists", match_restart: "Start over",
-    login: "Log in", join: "Join as artist",
+    login: "Log in", join: "Sign up",
+    reg_choose: "How do you want to join?",
+    reg_as_artist: "As an artist", reg_as_artist_d: "Create a profile, add your work and appear in the directory.",
+    reg_as_user: "As a user", reg_as_user_d: "Free account — rate, comment and save favorites.",
+    user_signup_title: "User sign up", user_signup_sub: "Free user account.",
     logout: "Log out", login_title: "Log in", login_btn: "Log in",
     login_error: "Wrong email or password.", submitting: "Creating account...",
     err_taken: "This nickname or email is already taken.",
@@ -276,6 +287,9 @@ const I18N = {
     signup_free: "Create a free account", signup_title: "Free account",
     l_displayname: "Display name", signup_btn: "Create account",
     have_account: "Already have an account? Log in", anon_user: "User",
+    nav_admin: "Admin", admin_title: "Admin panel",
+    admin_reports: "Reports", admin_no_reports: "No reports.",
+    admin_artists: "Artists", admin_del_content: "Delete content", admin_dismiss: "Dismiss",
     hero_a: "Find an", hero_b: "artist",
     hero_sub: "Enter a nickname, city or style — or use the filters below.",
     search_ph: "e.g. krakow, fine line, @zuza...",
@@ -466,6 +480,13 @@ const css = `
   .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
   .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
   .btn:disabled:hover { opacity: .4; transform: none; }
+  .btn-danger { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+  .btn-danger:hover { background: rgba(248,113,113,.2); }
+  .admin-list { max-width: 760px; display: flex; flex-direction: column; gap: 8px; }
+  .admin-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: #111; border: 1px solid #1c1c1c; border-radius: 12px; padding: 12px 16px; }
+  .admin-row-main { font-size: 14px; font-weight: 600; color: #eee; }
+  .admin-row-sub { font-size: 12px; color: #555; margin-top: 2px; word-break: break-all; }
   .form-warning { font-size: 12px; color: #f0a868; margin-top: 18px; text-align: right; }
   .form-error { font-size: 13px; color: #f87171; margin-top: 14px; padding: 10px 12px;
     background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.25); border-radius: 10px; }
@@ -747,6 +768,15 @@ const css = `
   .success-state { text-align: center; padding: 40px 0; }
   .success-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #e879f9, #818cf8);
     display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+  .reg-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 620px; margin: 0 auto; }
+  .reg-choice-card { text-align: center; background: #111; border: 1px solid #1c1c1c; border-radius: 16px;
+    padding: 32px 22px; cursor: pointer; transition: all .2s; color: #ccc; }
+  .reg-choice-card:hover { border-color: #818cf8; transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(129,140,248,.12); }
+  .reg-choice-card svg { color: #818cf8; margin-bottom: 12px; width: 28px; height: 28px; }
+  .reg-choice-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: #fff; }
+  .reg-choice-card p { font-size: 13px; color: #666; line-height: 1.5; }
+  @media (max-width: 560px) { .reg-choice { grid-template-columns: 1fr; } }
   .success-state h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
   .success-state p { color: #666; font-size: 14px; line-height: 1.6; }
 
@@ -1240,6 +1270,109 @@ function RegisterFlow({ onBack, onDone }) {
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── REJESTRACJA UŻYTKOWNIKA (darmowe konto) ────────────────────────────────────
+function UserSignup({ onBack, onDone }) {
+  const { t } = useLang();
+  const [form, setForm] = useState({ displayName: "", email: "", password: "", password2: "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const u = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const pw = form.password;
+  const r = { len: pw.length >= 8, lower: /[a-z]/.test(pw), upper: /[A-Z]/.test(pw), special: /[^A-Za-z0-9]/.test(pw) };
+  const pwValid = r.len && r.lower && r.upper && r.special;
+  const match = pw.length > 0 && pw === form.password2;
+  const valid = form.displayName.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && match;
+
+  const submit = async () => {
+    setBusy(true); setErr("");
+    const { data, error } = await supabase.auth.signUp({ email: form.email, password: form.password });
+    if (error) { setBusy(false); setErr(error.message); return; }
+    if (data.user) {
+      await supabase.from("profiles").upsert({
+        id: data.user.id, display_name: form.displayName, role: "user",
+      });
+    }
+    setBusy(false);
+    if (data.session) onDone();
+    else setErr("Wyłącz potwierdzanie e-mail w Supabase, aby od razu się zalogować.");
+  };
+
+  return (
+    <div className="register">
+      <button className="register-back" onClick={onBack}><IconBack /> {t("back")}</button>
+      <div className="reg-card">
+        <h2>{t("user_signup_title")}</h2>
+        <p>{t("user_signup_sub")}</p>
+        <div className="form-row">
+          <label className="form-label">{t("l_displayname")} *</label>
+          <input className="form-input" value={form.displayName}
+            onChange={e => u("displayName", e.target.value)} placeholder={t("ph_nick")} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("l_email")}</label>
+          <input className="form-input" type="email" value={form.email}
+            onChange={e => u("email", e.target.value)} placeholder={t("ph_email")} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("l_password")}</label>
+          <div className="pw-intro">{t("pw_intro")}</div>
+          <ul className="pw-rules">
+            <li className={r.len ? "ok" : ""}><span className="pw-dot" /> {t("pw_len")}</li>
+            <li className={r.lower ? "ok" : ""}><span className="pw-dot" /> {t("pw_lower")}</li>
+            <li className={r.upper ? "ok" : ""}><span className="pw-dot" /> {t("pw_upper")}</li>
+            <li className={r.special ? "ok" : ""}><span className="pw-dot" /> {t("pw_special")}</li>
+          </ul>
+          <input className="form-input" type="password" value={form.password}
+            onChange={e => u("password", e.target.value)} placeholder={t("ph_password")} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("l_password2")}</label>
+          <input className="form-input" type="password" value={form.password2}
+            onChange={e => u("password2", e.target.value)} placeholder={t("ph_password2")} />
+          {form.password2.length > 0 && (
+            <div className={`pw-match ${match ? "ok" : "bad"}`}>
+              {match ? t("pw_match_ok") : t("pw_match_bad")}
+            </div>
+          )}
+        </div>
+        {err && <div className="form-error">{err}</div>}
+        <div className="form-actions">
+          <button className="btn btn-primary" disabled={busy || !valid} onClick={submit}>
+            {busy ? "…" : t("signup_btn")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── REJESTRACJA: wybór ścieżki (artysta / użytkownik) ──────────────────────────
+function Register({ onBack, onDone }) {
+  const { t } = useLang();
+  const [mode, setMode] = useState(null);
+  if (mode === "artist") return <RegisterFlow onBack={() => setMode(null)} onDone={onDone} />;
+  if (mode === "user") return <UserSignup onBack={() => setMode(null)} onDone={onDone} />;
+  return (
+    <div className="register">
+      <button className="register-back" onClick={onBack}><IconBack /> {t("back")}</button>
+      <h2 style={{ fontSize: 24, textAlign: "center", marginBottom: 28 }}>{t("reg_choose")}</h2>
+      <div className="reg-choice">
+        <button className="reg-choice-card" onClick={() => setMode("artist")}>
+          <IconUser />
+          <h3>{t("reg_as_artist")}</h3>
+          <p>{t("reg_as_artist_d")}</p>
+        </button>
+        <button className="reg-choice-card" onClick={() => setMode("user")}>
+          <IconHeart />
+          <h3>{t("reg_as_user")}</h3>
+          <p>{t("reg_as_user_d")}</p>
+        </button>
       </div>
     </div>
   );
@@ -2354,9 +2487,77 @@ function EditProfile({ artist, onSaved }) {
   );
 }
 
+// ─── PANEL ADMINA (zgłoszenia + moderacja) ──────────────────────────────────────
+function AdminPanel() {
+  const { t } = useLang();
+  const [reports, setReports] = useState([]);
+  const [arts, setArts] = useState([]);
+
+  const load = async () => {
+    const { data: r } = await supabase.from("reports").select("*").order("created_at", { ascending: false });
+    setReports(r || []);
+    const { data: a } = await supabase.from("artists").select("id,nick,city,plan").order("created_at", { ascending: false });
+    setArts(a || []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const tableFor = (type) => type === "artist" ? "artists" : type === "comment" ? "comments" : "reviews";
+
+  const delTarget = async (rep) => {
+    await supabase.from(tableFor(rep.target_type)).delete().eq("id", rep.target_id);
+    await supabase.from("reports").delete().eq("id", rep.id);
+    load();
+  };
+  const dismiss = async (id) => { await supabase.from("reports").delete().eq("id", id); load(); };
+  const delArtist = async (id) => { await supabase.from("artists").delete().eq("id", id); load(); };
+
+  return (
+    <div className="explore">
+      <div className="explore-title">{t("admin_title")}</div>
+
+      <div className="section-header" style={{ margin: "20px 0 14px" }}>
+        <span className="section-title">{t("admin_reports")}</span>
+        <span className="section-count">{reports.length}</span>
+      </div>
+      {reports.length === 0 ? <div className="muted">{t("admin_no_reports")}</div> : (
+        <div className="admin-list">
+          {reports.map(r => (
+            <div className="admin-row" key={r.id}>
+              <div>
+                <div className="admin-row-main">{r.target_type} · {r.reason || "—"}</div>
+                <div className="admin-row-sub">{r.target_id}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-ghost" onClick={() => dismiss(r.id)}>{t("admin_dismiss")}</button>
+                <button className="btn btn-danger" onClick={() => delTarget(r)}>{t("admin_del_content")}</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="section-header" style={{ margin: "32px 0 14px" }}>
+        <span className="section-title">{t("admin_artists")}</span>
+        <span className="section-count">{arts.length}</span>
+      </div>
+      <div className="admin-list">
+        {arts.map(a => (
+          <div className="admin-row" key={a.id}>
+            <div>
+              <div className="admin-row-main">@{a.nick}</div>
+              <div className="admin-row-sub">{a.city} · {a.plan}</div>
+            </div>
+            <button className="btn btn-danger" onClick={() => delArtist(a.id)}>{t("del")}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Ścieżki URL dla zakładek (profile artystów: /nick)
 const TAB_PATHS = { search: "/", explore: "/odkrywaj", works: "/prace",
-  match: "/dobierz", map: "/mapa", register: "/dolacz", account: "/konto" };
+  match: "/dobierz", map: "/mapa", register: "/dolacz", account: "/konto", admin: "/admin" };
 const PATH_TABS = Object.fromEntries(Object.entries(TAB_PATHS).map(([t, p]) => [p, t]));
 
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
@@ -2367,6 +2568,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [recovery, setRecovery] = useState(false);
+  const [myRole, setMyRole] = useState(null);
   const [lang, setLangState] = useState(() => {
     try { return localStorage.getItem("usart_lang") || "pl"; } catch { return "pl"; }
   });
@@ -2427,6 +2629,13 @@ export default function App() {
   const artists = [...dbArtists, ...ARTISTS];
   artistsRef.current = artists;
   const myArtist = session ? dbArtists.find(a => a.id === session.user.id) : null;
+
+  // Rola zalogowanego użytkownika (do panelu admina)
+  useEffect(() => {
+    if (!session) { setMyRole(null); return; }
+    supabase.from("profiles").select("role").eq("id", session.user.id).single()
+      .then(({ data }) => setMyRole(data?.role || "user"));
+  }, [session]);
 
   // Rozwiązanie /nick na profil, gdy dane się załadują
   useEffect(() => {
@@ -2489,6 +2698,11 @@ export default function App() {
             </div>
             {session ? (
               <div className="nav-user">
+                {myRole === "admin" && (
+                  <button className="btn btn-ghost" onClick={() => go({ tab: "admin" })}>
+                    {t("nav_admin")}
+                  </button>
+                )}
                 {myArtist && (
                   <button className="btn btn-ghost" onClick={() => go({ tab: "account" })}>
                     {t("nav_account")}
@@ -2524,7 +2738,7 @@ export default function App() {
         ) : tab === "map" ? (
           <MapView onArtist={openArtist} artists={artists} />
         ) : tab === "register" ? (
-          <RegisterFlow
+          <Register
             onBack={() => window.history.back()}
             onDone={() => { loadArtists(); go({ tab: "search" }); }}
           />
@@ -2532,6 +2746,8 @@ export default function App() {
           myArtist
             ? <EditProfile artist={myArtist} onSaved={loadArtists} />
             : <div className="empty" style={{ padding: "72px 24px" }}><h3>{t("no_profile")}</h3></div>
+        ) : tab === "admin" ? (
+          myRole === "admin" ? <AdminPanel /> : <div className="empty" style={{ padding: "72px 24px" }}><h3>—</h3></div>
         ) : null}
 
         {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
