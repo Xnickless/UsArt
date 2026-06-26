@@ -170,8 +170,11 @@ const I18N = {
     account_favs: "Ulubieni artyści", account_no_favs: "Nie masz jeszcze ulubionych artystów.",
     acc_profile: "Dane konta", acc_email_title: "Zmiana e-maila", acc_new_email: "Nowy e-mail",
     acc_email_saved: "Zapisano. Jeśli wymagane, potwierdź zmianę linkiem z e-maila.",
-    acc_pw_title: "Zmiana hasła", acc_pw_saved: "Hasło zostało zmienione.",
-    acc_current_email: "Obecny e-mail",
+    acc_pw_title: "Zmiana hasła", acc_current_email: "Obecny e-mail",
+    acc_pw_reset_info: "Wyślemy link do zmiany hasła na Twój e-mail.", acc_pw_send: "Wyślij link",
+    acc_name_taken: "Ta nazwa jest już zajęta — wybierz inną.",
+    nav_fav: "Ulubieni", fav_sub: "Twoi zapisani artyści.",
+    fav_login: "Zaloguj się, aby zobaczyć swoich ulubionych artystów.",
     edit_title: "Edytuj profil",
     edit_sub: "Zmień swoje dane i prace.", save: "Zapisz zmiany", saved: "Zapisano!",
     edit_photos: "Twoje prace", add_photos: "Dodaj zdjęcia", del: "Usuń",
@@ -277,8 +280,11 @@ const I18N = {
     account_favs: "Favorite artists", account_no_favs: "No favorite artists yet.",
     acc_profile: "Account details", acc_email_title: "Change email", acc_new_email: "New email",
     acc_email_saved: "Saved. If required, confirm the change via the email link.",
-    acc_pw_title: "Change password", acc_pw_saved: "Password changed.",
-    acc_current_email: "Current email",
+    acc_pw_title: "Change password", acc_current_email: "Current email",
+    acc_pw_reset_info: "We'll email you a password reset link.", acc_pw_send: "Send link",
+    acc_name_taken: "This name is already taken — choose another.",
+    nav_fav: "Favorites", fav_sub: "Your saved artists.",
+    fav_login: "Log in to see your favorite artists.",
     edit_title: "Edit profile",
     edit_sub: "Update your details and work.", save: "Save changes", saved: "Saved!",
     edit_photos: "Your work", add_photos: "Add photos", del: "Delete",
@@ -2567,6 +2573,35 @@ function AdminPanel() {
   );
 }
 
+// ─── ULUBIENI (strona główna, obok Szukaj) ─────────────────────────────────────
+function FavoritesPage({ session, artists, onArtist }) {
+  const { t } = useLang();
+  const [favs, setFavs] = useState([]);
+  useEffect(() => {
+    if (!session) { setFavs([]); return; }
+    supabase.from("favorites").select("artist_id").eq("user_id", session.user.id).then(({ data }) => {
+      const ids = (data || []).map(x => x.artist_id);
+      setFavs(artists.filter(a => ids.includes(a.id)));
+    });
+  }, [session, artists]);
+
+  return (
+    <div className="explore">
+      <div className="explore-title">{t("nav_fav")}</div>
+      <div className="explore-sub">{t("fav_sub")}</div>
+      {!session ? (
+        <div className="login-hint" style={{ maxWidth: 420 }}>{t("fav_login")}</div>
+      ) : favs.length === 0 ? (
+        <div className="muted">{t("account_no_favs")}</div>
+      ) : (
+        <div className="grid" style={{ padding: 0 }}>
+          {favs.map(a => <ArtistCard key={a.id} artist={a} onClick={() => onArtist(a)} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── PANEL UŻYTKOWNIKA (zwykłe konto) ───────────────────────────────────────────
 function UserAccount({ session, artists, onArtist }) {
   const { t } = useLang();
@@ -2575,17 +2610,14 @@ function UserAccount({ session, artists, onArtist }) {
   const [favs, setFavs] = useState([]);
   const [nameBusy, setNameBusy] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
+  const [nameErr, setNameErr] = useState("");
 
   const [newEmail, setNewEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState("");
 
-  const [pw, setPw] = useState("");
-  const [pw2, setPw2] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
   const [pwMsg, setPwMsg] = useState("");
-  const r = { len: pw.length >= 8, lower: /[a-z]/.test(pw), upper: /[A-Z]/.test(pw), special: /[^A-Za-z0-9]/.test(pw) };
-  const pwValid = r.len && r.lower && r.upper && r.special && pw === pw2;
 
   const load = async () => {
     const { data: p } = await supabase.from("profiles").select("display_name").eq("id", uid).single();
@@ -2597,8 +2629,12 @@ function UserAccount({ session, artists, onArtist }) {
   useEffect(() => { load(); }, [artists]);
 
   const saveName = async () => {
-    setNameBusy(true);
-    await supabase.from("profiles").update({ display_name: name }).eq("id", uid);
+    setNameBusy(true); setNameErr(""); setNameSaved(false);
+    const clean = name.trim();
+    const { data: taken } = await supabase.from("profiles")
+      .select("id").ilike("display_name", clean).neq("id", uid).limit(1);
+    if (taken && taken.length) { setNameBusy(false); setNameErr(t("acc_name_taken")); return; }
+    await supabase.from("profiles").update({ display_name: clean }).eq("id", uid);
     setNameBusy(false); setNameSaved(true);
   };
   const saveEmail = async () => {
@@ -2608,12 +2644,10 @@ function UserAccount({ session, artists, onArtist }) {
     setEmailMsg(error ? error.message : t("acc_email_saved"));
     if (!error) setNewEmail("");
   };
-  const savePw = async () => {
+  const sendResetLink = async () => {
     setPwBusy(true); setPwMsg("");
-    const { error } = await supabase.auth.updateUser({ password: pw });
-    setPwBusy(false);
-    if (error) setPwMsg(error.message);
-    else { setPwMsg(t("acc_pw_saved")); setPw(""); setPw2(""); }
+    await supabase.auth.resetPasswordForEmail(session.user.email, { redirectTo: window.location.origin });
+    setPwBusy(false); setPwMsg(t("reset_sent"));
   };
   const removeFav = async (id) => {
     await supabase.from("favorites").delete().eq("user_id", uid).eq("artist_id", id);
@@ -2631,11 +2665,12 @@ function UserAccount({ session, artists, onArtist }) {
         <div className="form-row">
           <label className="form-label">{t("l_displayname")}</label>
           <input className="form-input" value={name}
-            onChange={e => { setName(e.target.value); setNameSaved(false); }} />
+            onChange={e => { setName(e.target.value); setNameSaved(false); setNameErr(""); }} />
         </div>
+        {nameErr && <div className="form-error">{nameErr}</div>}
         <div className="form-actions">
           {nameSaved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
-          <button className="btn btn-primary" disabled={nameBusy} onClick={saveName}>{t("save")}</button>
+          <button className="btn btn-primary" disabled={nameBusy || !name.trim()} onClick={saveName}>{t("save")}</button>
         </div>
       </div>
 
@@ -2658,33 +2693,13 @@ function UserAccount({ session, artists, onArtist }) {
         </div>
       </div>
 
-      {/* Zmiana hasła */}
+      {/* Zmiana hasła (link na e-mail) */}
       <div className="reg-card" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("acc_pw_title")}</h2>
-        <div className="form-row">
-          <label className="form-label">{t("new_password")}</label>
-          <ul className="pw-rules" style={{ marginTop: 0 }}>
-            <li className={r.len ? "ok" : ""}><span className="pw-dot" /> {t("pw_len")}</li>
-            <li className={r.lower ? "ok" : ""}><span className="pw-dot" /> {t("pw_lower")}</li>
-            <li className={r.upper ? "ok" : ""}><span className="pw-dot" /> {t("pw_upper")}</li>
-            <li className={r.special ? "ok" : ""}><span className="pw-dot" /> {t("pw_special")}</li>
-          </ul>
-          <input className="form-input" type="password" value={pw}
-            onChange={e => { setPw(e.target.value); setPwMsg(""); }} placeholder={t("ph_password")} />
-        </div>
-        <div className="form-row">
-          <label className="form-label">{t("l_password2")}</label>
-          <input className="form-input" type="password" value={pw2}
-            onChange={e => setPw2(e.target.value)} placeholder={t("ph_password2")} />
-          {pw2.length > 0 && (
-            <div className={`pw-match ${pw === pw2 ? "ok" : "bad"}`}>
-              {pw === pw2 ? t("pw_match_ok") : t("pw_match_bad")}
-            </div>
-          )}
-        </div>
+        <h2 style={{ fontSize: 16, marginBottom: 8 }}>{t("acc_pw_title")}</h2>
+        <p style={{ color: "#666", fontSize: 13, marginBottom: 14 }}>{t("acc_pw_reset_info")}</p>
         {pwMsg && <div className="form-note-ok">{pwMsg}</div>}
         <div className="form-actions">
-          <button className="btn btn-primary" disabled={pwBusy || !pwValid} onClick={savePw}>{t("save")}</button>
+          <button className="btn btn-primary" disabled={pwBusy} onClick={sendResetLink}>{t("acc_pw_send")}</button>
         </div>
       </div>
 
@@ -2714,8 +2729,8 @@ function UserAccount({ session, artists, onArtist }) {
 }
 
 // Ścieżki URL dla zakładek (profile artystów: /nick)
-const TAB_PATHS = { search: "/", explore: "/odkrywaj", works: "/prace",
-  match: "/dobierz", map: "/mapa", register: "/dolacz", account: "/konto", admin: "/admin" };
+const TAB_PATHS = { search: "/", favorites: "/ulubione", works: "/prace",
+  map: "/mapa", register: "/dolacz", account: "/konto", admin: "/admin" };
 const PATH_TABS = Object.fromEntries(Object.entries(TAB_PATHS).map(([t, p]) => [p, t]));
 
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
@@ -2832,17 +2847,13 @@ export default function App() {
               onClick={() => go({ tab: "search" })}>
               <IconSearch /> {t("nav_search")}
             </button>
-            <button className={`nav-tab ${tab === "explore" && !profileArtist ? "active" : ""}`}
-              onClick={() => go({ tab: "explore" })}>
-              <IconCompass /> {t("nav_explore")}
+            <button className={`nav-tab ${tab === "favorites" && !profileArtist ? "active" : ""}`}
+              onClick={() => go({ tab: "favorites" })}>
+              <IconHeart /> {t("nav_fav")}
             </button>
             <button className={`nav-tab ${tab === "works" && !profileArtist ? "active" : ""}`}
               onClick={() => go({ tab: "works" })}>
               <IconGrid /> {t("nav_works")}
-            </button>
-            <button className={`nav-tab ${tab === "match" && !profileArtist ? "active" : ""}`}
-              onClick={() => go({ tab: "match" })}>
-              <IconCompass /> {t("nav_match")}
             </button>
             <button className={`nav-tab ${tab === "map" && !profileArtist ? "active" : ""}`}
               onClick={() => go({ tab: "map" })}>
@@ -2885,12 +2896,10 @@ export default function App() {
           <ArtistProfile artist={profileArtist} onBack={closeArtist} session={session} />
         ) : tab === "search" ? (
           <SearchPage onArtist={openArtist} artists={artists} />
-        ) : tab === "explore" ? (
-          <ExplorePage onArtist={openArtist} artists={artists} />
+        ) : tab === "favorites" ? (
+          <FavoritesPage session={session} onArtist={openArtist} artists={artists} />
         ) : tab === "works" ? (
           <WorksFeed onArtist={openArtist} artists={artists} />
-        ) : tab === "match" ? (
-          <ArtistMatcher onArtist={openArtist} artists={artists} />
         ) : tab === "map" ? (
           <MapView onArtist={openArtist} artists={artists} />
         ) : tab === "register" ? (
