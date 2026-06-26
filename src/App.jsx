@@ -147,8 +147,12 @@ const fromDb = (a) => ({
 // ─── i18n (PL / EN) ─────────────────────────────────────────────────────────────
 const I18N = {
   pl: {
-    nav_search: "Szukaj", nav_explore: "Odkrywaj", nav_works: "Prace",
+    nav_search: "Szukaj", nav_explore: "Odkrywaj", nav_works: "Prace", nav_match: "Dobierz",
     works_title: "Prace", works_sub: "Przeglądaj wszystkie prace artystów — kliknij, by zobaczyć profil.",
+    match_title: "Dobierz artystę", match_sub: "Odpowiedz na kilka pytań, a pokażemy pasujących artystów.",
+    match_q_cat: "Czego szukasz?", match_q_style: "Jaki styl Cię interesuje?",
+    match_q_city: "W jakim mieście?", match_any: "Dowolne",
+    match_results: "Pasujący artyści", match_restart: "Zacznij od nowa",
     login: "Zaloguj się", join: "Dołącz jako artysta",
     logout: "Wyloguj", login_title: "Zaloguj się", login_btn: "Zaloguj",
     login_error: "Błędny e-mail lub hasło.", submitting: "Tworzę konto...",
@@ -232,8 +236,12 @@ const I18N = {
     go_home: "Wróć na stronę główną", see_profile: "Zobacz swój profil",
   },
   en: {
-    nav_search: "Search", nav_explore: "Explore", nav_works: "Work",
+    nav_search: "Search", nav_explore: "Explore", nav_works: "Work", nav_match: "Match",
     works_title: "Work", works_sub: "Browse all artists' work — click to see the profile.",
+    match_title: "Find your artist", match_sub: "Answer a few questions and we'll show matching artists.",
+    match_q_cat: "What are you looking for?", match_q_style: "Which style interests you?",
+    match_q_city: "In which city?", match_any: "Any",
+    match_results: "Matching artists", match_restart: "Start over",
     login: "Log in", join: "Join as artist",
     logout: "Log out", login_title: "Log in", login_btn: "Log in",
     login_error: "Wrong email or password.", submitting: "Creating account...",
@@ -490,6 +498,8 @@ const css = `
   .login-hint { font-size: 13px; color: #666; padding: 12px; background: #0f0f0f;
     border: 1px solid #1a1a1a; border-radius: 12px; margin-bottom: 16px; text-align: center; }
   .muted { font-size: 13px; color: #555; padding: 8px 0; }
+
+  .match-q { font-size: 19px; font-weight: 600; color: #eee; margin: 8px 0 18px; }
 
   /* ── WORKS FEED ── */
   .works-grid { max-width: 1160px; margin: 0 auto; padding: 0 28px 80px;
@@ -1571,6 +1581,94 @@ function ArtistProfile({ artist: a, onBack, session }) {
   );
 }
 
+// ─── ARTIST MATCHER (kreator doboru) ────────────────────────────────────────────
+function ArtistMatcher({ artists, onArtist }) {
+  const { lang, t } = useLang();
+  const [step, setStep] = useState(0);
+  const [cat, setCat] = useState(null);
+  const [style, setStyle] = useState(null);
+  const [city, setCity] = useState(null);
+
+  const cities = [...new Set(artists.map(a => a.city))].sort();
+  const styles = cat === "Tatuaż" ? TATTOO_STYLES : cat ? (OTHER_STYLES[cat] || []) : [];
+  const results = artists.filter(a =>
+    (!cat || a.categories.includes(cat)) &&
+    (!style || a.styles.includes(style)) &&
+    (!city || a.city === city));
+
+  const restart = () => { setStep(0); setCat(null); setStyle(null); setCity(null); };
+
+  return (
+    <div className="explore">
+      <div className="explore-title">{t("match_title")}</div>
+      <div className="explore-sub">{t("match_sub")}</div>
+
+      {step > 0 && step < 3 && (
+        <button className="profile-back" style={{ marginBottom: 20 }}
+          onClick={() => setStep(s => s - 1)}><IconBack /> {t("back_btn")}</button>
+      )}
+
+      {step === 0 && (
+        <>
+          <div className="match-q">{t("match_q_cat")}</div>
+          <div className="cat-grid">
+            {ALL_CATEGORIES.map(c => (
+              <div className="cat-card" key={c} onClick={() => { setCat(c); setStyle(null); setStep(1); }}>
+                <div className="cat-card-name">{tCat(c, lang)}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 1 && (
+        <>
+          <div className="match-q">{t("match_q_style")}</div>
+          <div className="filter-row" style={{ gap: 8 }}>
+            <button className="chip" onClick={() => { setStyle(null); setStep(2); }}>{t("match_any")}</button>
+            {styles.map(s => (
+              <button key={s} className="chip chip-style" onClick={() => { setStyle(s); setStep(2); }}>
+                {tStyle(s, lang)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <div className="match-q">{t("match_q_city")}</div>
+          <div className="filter-row" style={{ gap: 8 }}>
+            <button className="chip" onClick={() => { setCity(null); setStep(3); }}>{t("match_any")}</button>
+            {cities.map(c => (
+              <button key={c} className="chip" onClick={() => { setCity(c); setStep(3); }}>{c}</button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <div className="section-header" style={{ marginBottom: 18 }}>
+            <span className="section-title">{t("match_results")}</span>
+            <span className="section-count">{t("artists_count", { n: results.length })}</span>
+            <button className="mini-link" style={{ marginLeft: "auto" }} onClick={restart}>
+              ↻ {t("match_restart")}
+            </button>
+          </div>
+          {results.length === 0 ? (
+            <div className="empty"><h3>{t("no_artists")}</h3><p>{t("try_filters")}</p></div>
+          ) : (
+            <div className="grid" style={{ padding: 0 }}>
+              {results.map(a => <ArtistCard key={a.id} artist={a} onClick={() => onArtist(a)} />)}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── WORKS FEED (galeria wszystkich prac) ───────────────────────────────────────
 function WorksFeed({ artists, onArtist }) {
   const { lang, t } = useLang();
@@ -2129,6 +2227,10 @@ export default function App() {
               onClick={() => go({ tab: "works" })}>
               <IconGrid /> {t("nav_works")}
             </button>
+            <button className={`nav-tab ${tab === "match" && !profileArtist ? "active" : ""}`}
+              onClick={() => go({ tab: "match" })}>
+              <IconCompass /> {t("nav_match")}
+            </button>
           </div>
           <div className="nav-right">
             <div className="lang-switch">
@@ -2167,6 +2269,8 @@ export default function App() {
           <ExplorePage onArtist={openArtist} artists={artists} />
         ) : tab === "works" ? (
           <WorksFeed onArtist={openArtist} artists={artists} />
+        ) : tab === "match" ? (
+          <ArtistMatcher onArtist={openArtist} artists={artists} />
         ) : tab === "register" ? (
           <RegisterFlow
             onBack={() => window.history.back()}
