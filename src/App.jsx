@@ -151,6 +151,15 @@ const I18N = {
     logout: "Wyloguj", login_title: "Zaloguj się", login_btn: "Zaloguj",
     login_error: "Błędny e-mail lub hasło.", submitting: "Tworzę konto...",
     err_taken: "Ten nick lub e-mail jest już zajęty.",
+    nav_account: "Mój profil", edit_title: "Edytuj profil",
+    edit_sub: "Zmień swoje dane i prace.", save: "Zapisz zmiany", saved: "Zapisano!",
+    edit_photos: "Twoje prace", add_photos: "Dodaj zdjęcia", del: "Usuń",
+    no_profile: "Nie masz jeszcze profilu artysty.",
+    forgot: "Nie pamiętasz hasła?", reset_title: "Reset hasła",
+    reset_sub: "Podaj e-mail — wyślemy link do ustawienia nowego hasła.",
+    reset_send: "Wyślij link", reset_sent: "Sprawdź skrzynkę — wysłaliśmy link do zmiany hasła.",
+    back_to_login: "Wróć do logowania", new_password: "Nowe hasło",
+    set_password: "Ustaw nowe hasło", pw_changed: "Hasło zmienione!",
     hero_a: "Znajdź", hero_b: "artystę",
     hero_sub: "Wpisz nick, miasto lub styl — albo użyj filtrów poniżej.",
     search_ph: "np. kraków, fine line, @zuza...",
@@ -214,6 +223,15 @@ const I18N = {
     logout: "Log out", login_title: "Log in", login_btn: "Log in",
     login_error: "Wrong email or password.", submitting: "Creating account...",
     err_taken: "This nickname or email is already taken.",
+    nav_account: "My profile", edit_title: "Edit profile",
+    edit_sub: "Update your details and work.", save: "Save changes", saved: "Saved!",
+    edit_photos: "Your work", add_photos: "Add photos", del: "Delete",
+    no_profile: "You don't have an artist profile yet.",
+    forgot: "Forgot password?", reset_title: "Reset password",
+    reset_sub: "Enter your email — we'll send a link to set a new password.",
+    reset_send: "Send link", reset_sent: "Check your inbox — we sent a reset link.",
+    back_to_login: "Back to login", new_password: "New password",
+    set_password: "Set new password", pw_changed: "Password changed!",
     hero_a: "Find an", hero_b: "artist",
     hero_sub: "Enter a nickname, city or style — or use the filters below.",
     search_ph: "e.g. krakow, fine line, @zuza...",
@@ -397,6 +415,15 @@ const css = `
   .nav-user { display: flex; align-items: center; gap: 8px; }
   .nav-email { font-size: 12px; color: #888; max-width: 150px; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; }
+  .link-btn { display: block; width: 100%; text-align: center; margin-top: 14px; background: none;
+    border: none; color: #818cf8; font-size: 13px; cursor: pointer; }
+  .link-btn:hover { color: #a5b4fc; text-decoration: underline; }
+  .form-note-ok { font-size: 13px; color: #4ade80; padding: 10px 12px; margin-bottom: 4px;
+    background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.25); border-radius: 10px; }
+  .del-photo { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px); border: none; color: #fff; cursor: pointer; border-radius: 7px;
+    padding: 5px; display: flex; opacity: 0; transition: opacity .15s; }
+  .proj-item:hover .del-photo { opacity: 1; }
 
   /* ── HERO ── */
   .hero { padding: 72px 28px 48px; text-align: center; max-width: 680px; margin: 0 auto; }
@@ -1392,15 +1419,17 @@ function SearchPage({ onArtist, artists }) {
   );
 }
 
-// ─── LOGIN MODAL ───────────────────────────────────────────────────────────────
+// ─── LOGIN MODAL (logowanie + reset hasła) ──────────────────────────────────────
 function LoginModal({ onClose }) {
   const { t } = useLang();
+  const [mode, setMode] = useState("login"); // "login" | "reset"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [sent, setSent] = useState(false);
 
-  const submit = async () => {
+  const login = async () => {
     setBusy(true); setErr("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
@@ -1408,26 +1437,239 @@ function LoginModal({ onClose }) {
     else onClose();
   };
 
+  const sendReset = async () => {
+    setBusy(true); setErr("");
+    await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    setBusy(false); setSent(true);
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><IconX /></button>
-        <h2>{t("login_title")}</h2>
-        <p>UsArt</p>
+
+        {mode === "login" ? (
+          <>
+            <h2>{t("login_title")}</h2>
+            <p>UsArt</p>
+            <div className="form-row">
+              <label className="form-label">{t("l_email")}</label>
+              <input className="form-input" type="email" value={email}
+                onChange={e => setEmail(e.target.value)} placeholder={t("ph_email")} />
+            </div>
+            <div className="form-row">
+              <label className="form-label">{t("l_password")}</label>
+              <input className="form-input" type="password" value={password}
+                onChange={e => setPassword(e.target.value)} placeholder="••••••" />
+            </div>
+            {err && <div className="form-error">{err}</div>}
+            <button className="btn btn-primary" disabled={busy || !email || !password} onClick={login}>
+              {busy ? "…" : t("login_btn")}
+            </button>
+            <button className="link-btn" onClick={() => { setMode("reset"); setErr(""); }}>
+              {t("forgot")}
+            </button>
+          </>
+        ) : (
+          <>
+            <h2>{t("reset_title")}</h2>
+            <p>{t("reset_sub")}</p>
+            {sent ? (
+              <div className="form-note-ok">{t("reset_sent")}</div>
+            ) : (
+              <>
+                <div className="form-row">
+                  <label className="form-label">{t("l_email")}</label>
+                  <input className="form-input" type="email" value={email}
+                    onChange={e => setEmail(e.target.value)} placeholder={t("ph_email")} />
+                </div>
+                <button className="btn btn-primary" disabled={busy || !email} onClick={sendReset}>
+                  {busy ? "…" : t("reset_send")}
+                </button>
+              </>
+            )}
+            <button className="link-btn" onClick={() => { setMode("login"); setSent(false); }}>
+              {t("back_to_login")}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── RESET PASSWORD MODAL (po kliknięciu linku z e-maila) ───────────────────────
+function ResetPasswordModal({ onClose }) {
+  const { t } = useLang();
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const valid = password.length >= 8 && /[a-z]/.test(password)
+    && /[A-Z]/.test(password) && /[^A-Za-z0-9]/.test(password);
+
+  const save = async () => {
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setBusy(false);
+    if (!error) setDone(true);
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <h2>{t("set_password")}</h2>
+        {done ? (
+          <>
+            <div className="form-note-ok">{t("pw_changed")}</div>
+            <button className="btn btn-primary" onClick={onClose}>OK</button>
+          </>
+        ) : (
+          <>
+            <div className="pw-intro">{t("pw_intro")}</div>
+            <ul className="pw-rules">
+              <li className={password.length >= 8 ? "ok" : ""}><span className="pw-dot" /> {t("pw_len")}</li>
+              <li className={/[a-z]/.test(password) ? "ok" : ""}><span className="pw-dot" /> {t("pw_lower")}</li>
+              <li className={/[A-Z]/.test(password) ? "ok" : ""}><span className="pw-dot" /> {t("pw_upper")}</li>
+              <li className={/[^A-Za-z0-9]/.test(password) ? "ok" : ""}><span className="pw-dot" /> {t("pw_special")}</li>
+            </ul>
+            <div className="form-row">
+              <label className="form-label">{t("new_password")}</label>
+              <input className="form-input" type="password" value={password}
+                onChange={e => setPassword(e.target.value)} placeholder={t("ph_password")} />
+            </div>
+            <button className="btn btn-primary" disabled={busy || !valid} onClick={save}>
+              {busy ? "…" : t("set_password")}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── EDYCJA PROFILU (zalogowany artysta) ────────────────────────────────────────
+function EditProfile({ artist, onSaved }) {
+  const { lang, t } = useLang();
+  const [form, setForm] = useState({
+    name: artist.name || "", city: artist.city || "", category: artist.category || "",
+    styles: artist.styles || [], bio: artist.bio || "", instagram: artist.instagram || "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const update = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false); };
+  const toggleStyle = (s) => update("styles",
+    form.styles.includes(s) ? form.styles.filter(x => x !== s) : [...form.styles, s]);
+  const availableStyles = form.category === "Tatuaż"
+    ? TATTOO_STYLES : OTHER_STYLES[form.category] || [];
+
+  const saveProfile = async () => {
+    setBusy(true);
+    await supabase.from("artists").update({
+      name: form.name || null, city: form.city, category: form.category,
+      styles: form.styles, bio: form.bio || null, instagram: form.instagram || null,
+    }).eq("id", artist.id);
+    setBusy(false); setSaved(true);
+    onSaved();
+  };
+
+  const addPhotos = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    setBusy(true);
+    for (const file of files) {
+      const path = `${artist.id}/${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const { error: upErr } = await supabase.storage.from("portfolios").upload(path, file);
+      if (!upErr) {
+        const url = supabase.storage.from("portfolios").getPublicUrl(path).data.publicUrl;
+        await supabase.from("projects").insert({ artist_id: artist.id, title: artist.nick, img: url });
+      }
+    }
+    setBusy(false); onSaved();
+  };
+
+  const delPhoto = async (id) => {
+    setBusy(true);
+    await supabase.from("projects").delete().eq("id", id);
+    setBusy(false); onSaved();
+  };
+
+  return (
+    <div className="register">
+      <h2 style={{ fontSize: 24, marginBottom: 4 }}>{t("edit_title")}</h2>
+      <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>{t("edit_sub")} (@{artist.nick})</p>
+
+      <div className="reg-card">
         <div className="form-row">
-          <label className="form-label">{t("l_email")}</label>
-          <input className="form-input" type="email" value={email}
-            onChange={e => setEmail(e.target.value)} placeholder={t("ph_email")} />
+          <label className="form-label">{t("l_name")}</label>
+          <input className="form-input" value={form.name} onChange={e => update("name", e.target.value)} />
         </div>
         <div className="form-row">
-          <label className="form-label">{t("l_password")}</label>
-          <input className="form-input" type="password" value={password}
-            onChange={e => setPassword(e.target.value)} placeholder="••••••" />
+          <label className="form-label">{t("l_city")}</label>
+          <select className="form-input form-select"
+            value={REGISTER_CITIES.includes(form.city) ? form.city : ""}
+            onChange={e => update("city", e.target.value)}>
+            <option value="">{t("city_select")}</option>
+            {[...REGISTER_CITIES].sort((a, b) => a.localeCompare(b, "pl")).map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <input className="form-input" style={{ marginTop: 10 }} placeholder={t("city_other_ph")}
+            value={REGISTER_CITIES.includes(form.city) ? "" : form.city}
+            onChange={e => update("city", e.target.value)} />
         </div>
-        {err && <div className="form-error">{err}</div>}
-        <button className="btn btn-primary" disabled={busy || !email || !password} onClick={submit}>
-          {busy ? "…" : t("login_btn")}
-        </button>
+        <div className="form-row">
+          <label className="form-label">{t("l_cat")}</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {ALL_CATEGORIES.map(c => (
+              <button key={c} onClick={() => { update("category", c); update("styles", []); }}
+                className={`chip ${form.category === c ? "active" : ""}`}>{tCat(c, lang)}</button>
+            ))}
+          </div>
+        </div>
+        {availableStyles.length > 0 && (
+          <div className="form-row">
+            <label className="form-label">{t("l_style")}</label>
+            <div className="style-picker">
+              {availableStyles.map(s => (
+                <button key={s} className={`style-pick-btn ${form.styles.includes(s) ? "selected" : ""}`}
+                  onClick={() => toggleStyle(s)}>
+                  {form.styles.includes(s) && <IconCheck />} {tStyle(s, lang)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="form-row">
+          <label className="form-label">{t("l_ig")}</label>
+          <input className="form-input" value={form.instagram} onChange={e => update("instagram", e.target.value)} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("l_bio")}</label>
+          <textarea className="form-input" rows={3} value={form.bio}
+            onChange={e => update("bio", e.target.value)} style={{ resize: "vertical" }} />
+        </div>
+        <div className="form-actions">
+          {saved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
+          <button className="btn btn-primary" disabled={busy} onClick={saveProfile}>{t("save")}</button>
+        </div>
+      </div>
+
+      <div className="reg-card" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("edit_photos")}</h2>
+        <div className="proj-grid">
+          {(artist.projects || []).map(p => (
+            <div className="proj-item" key={p.id}>
+              <img src={p.img} alt="" />
+              <button className="del-photo" onClick={() => delPhoto(p.id)} title={t("del")}><IconX /></button>
+            </div>
+          ))}
+          <label className="upload-zone" style={{ aspectRatio: "1", padding: 0, display: "flex",
+            alignItems: "center", justifyContent: "center", borderRadius: 12 }}>
+            <input type="file" accept="image/*" multiple hidden onChange={addPhotos} />
+            <span style={{ fontSize: 28, color: "#444" }}>+</span>
+          </label>
+        </div>
       </div>
     </div>
   );
@@ -1440,6 +1682,7 @@ export default function App() {
   const [dbArtists, setDbArtists] = useState([]);
   const [session, setSession] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [recovery, setRecovery] = useState(false);
   const [lang, setLangState] = useState(() => {
     try { return localStorage.getItem("usart_lang") || "pl"; } catch { return "pl"; }
   });
@@ -1466,7 +1709,10 @@ export default function App() {
   useEffect(() => {
     loadArtists();
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      setSession(s);
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -1487,6 +1733,7 @@ export default function App() {
   // Prawdziwi artyści z bazy + przykładowi (żeby katalog nie był pusty na start)
   const artists = [...dbArtists, ...ARTISTS];
   artistsRef.current = artists;
+  const myArtist = session ? dbArtists.find(a => a.id === session.user.id) : null;
 
   const go = (next, push = true) => {
     setTab(next.tab);
@@ -1524,8 +1771,10 @@ export default function App() {
             </div>
             {session ? (
               <div className="nav-user">
-                <span className="nav-email">{session.user.email}</span>
-                <button className="btn btn-ghost" onClick={() => supabase.auth.signOut()}>
+                <button className="btn btn-ghost" onClick={() => go({ tab: "account" })}>
+                  {t("nav_account")}
+                </button>
+                <button className="btn btn-ghost" onClick={() => { supabase.auth.signOut(); go({ tab: "search" }); }}>
                   {t("logout")}
                 </button>
               </div>
@@ -1553,9 +1802,14 @@ export default function App() {
             onBack={() => window.history.back()}
             onDone={() => { loadArtists(); go({ tab: "search" }); }}
           />
+        ) : tab === "account" ? (
+          myArtist
+            ? <EditProfile artist={myArtist} onSaved={loadArtists} />
+            : <div className="empty" style={{ padding: "72px 24px" }}><h3>{t("no_profile")}</h3></div>
         ) : null}
 
         {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
+        {recovery && <ResetPasswordModal onClose={() => setRecovery(false)} />}
       </div>
     </LangContext.Provider>
   );
