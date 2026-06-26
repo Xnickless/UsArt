@@ -166,7 +166,9 @@ const I18N = {
     logout: "Wyloguj", login_title: "Zaloguj się", login_btn: "Zaloguj",
     login_error: "Błędny e-mail lub hasło.", submitting: "Tworzę konto...",
     err_taken: "Ten nick lub e-mail jest już zajęty.",
-    nav_account: "Mój profil", edit_title: "Edytuj profil",
+    nav_account: "Moje konto", account_title: "Moje konto",
+    account_favs: "Ulubieni artyści", account_no_favs: "Nie masz jeszcze ulubionych artystów.",
+    edit_title: "Edytuj profil",
     edit_sub: "Zmień swoje dane i prace.", save: "Zapisz zmiany", saved: "Zapisano!",
     edit_photos: "Twoje prace", add_photos: "Dodaj zdjęcia", del: "Usuń",
     no_profile: "Nie masz jeszcze profilu artysty.",
@@ -267,7 +269,9 @@ const I18N = {
     logout: "Log out", login_title: "Log in", login_btn: "Log in",
     login_error: "Wrong email or password.", submitting: "Creating account...",
     err_taken: "This nickname or email is already taken.",
-    nav_account: "My profile", edit_title: "Edit profile",
+    nav_account: "My account", account_title: "My account",
+    account_favs: "Favorite artists", account_no_favs: "No favorite artists yet.",
+    edit_title: "Edit profile",
     edit_sub: "Update your details and work.", save: "Save changes", saved: "Saved!",
     edit_photos: "Your work", add_photos: "Add photos", del: "Delete",
     no_profile: "You don't have an artist profile yet.",
@@ -2555,6 +2559,71 @@ function AdminPanel() {
   );
 }
 
+// ─── PANEL UŻYTKOWNIKA (zwykłe konto) ───────────────────────────────────────────
+function UserAccount({ session, artists, onArtist }) {
+  const { t } = useLang();
+  const uid = session.user.id;
+  const [name, setName] = useState("");
+  const [favs, setFavs] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = async () => {
+    const { data: p } = await supabase.from("profiles").select("display_name").eq("id", uid).single();
+    setName(p?.display_name || "");
+    const { data: f } = await supabase.from("favorites").select("artist_id").eq("user_id", uid);
+    const ids = (f || []).map(x => x.artist_id);
+    setFavs(artists.filter(a => ids.includes(a.id)));
+  };
+  useEffect(() => { load(); }, [artists]);
+
+  const saveName = async () => {
+    setBusy(true);
+    await supabase.from("profiles").update({ display_name: name }).eq("id", uid);
+    setBusy(false); setSaved(true);
+  };
+  const removeFav = async (id) => {
+    await supabase.from("favorites").delete().eq("user_id", uid).eq("artist_id", id);
+    load();
+  };
+
+  return (
+    <div className="register">
+      <h2 style={{ fontSize: 24, marginBottom: 4 }}>{t("account_title")}</h2>
+      <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>{session.user.email}</p>
+
+      <div className="reg-card">
+        <div className="form-row">
+          <label className="form-label">{t("l_displayname")}</label>
+          <input className="form-input" value={name}
+            onChange={e => { setName(e.target.value); setSaved(false); }} />
+        </div>
+        <div className="form-actions">
+          {saved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
+          <button className="btn btn-primary" disabled={busy} onClick={saveName}>{t("save")}</button>
+        </div>
+      </div>
+
+      <div className="reg-card" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("account_favs")} ({favs.length})</h2>
+        {favs.length === 0 ? <div className="muted">{t("account_no_favs")}</div> : (
+          <div className="grid" style={{ padding: 0 }}>
+            {favs.map(a => (
+              <div key={a.id} style={{ position: "relative" }}>
+                <ArtistCard artist={a} onClick={() => onArtist(a)} />
+                <button className="del-photo" style={{ opacity: 1 }}
+                  onClick={(e) => { e.stopPropagation(); removeFav(a.id); }} title={t("fav_remove")}>
+                  <IconHeart fill={true} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Ścieżki URL dla zakładek (profile artystów: /nick)
 const TAB_PATHS = { search: "/", explore: "/odkrywaj", works: "/prace",
   match: "/dobierz", map: "/mapa", register: "/dolacz", account: "/konto", admin: "/admin" };
@@ -2703,11 +2772,9 @@ export default function App() {
                     {t("nav_admin")}
                   </button>
                 )}
-                {myArtist && (
-                  <button className="btn btn-ghost" onClick={() => go({ tab: "account" })}>
-                    {t("nav_account")}
-                  </button>
-                )}
+                <button className="btn btn-ghost" onClick={() => go({ tab: "account" })}>
+                  {t("nav_account")}
+                </button>
                 <button className="btn btn-ghost" onClick={() => { supabase.auth.signOut(); go({ tab: "search" }); }}>
                   {t("logout")}
                 </button>
@@ -2745,7 +2812,9 @@ export default function App() {
         ) : tab === "account" ? (
           myArtist
             ? <EditProfile artist={myArtist} onSaved={loadArtists} />
-            : <div className="empty" style={{ padding: "72px 24px" }}><h3>{t("no_profile")}</h3></div>
+            : session
+              ? <UserAccount session={session} artists={artists} onArtist={openArtist} />
+              : <div className="empty" style={{ padding: "72px 24px" }}><h3>{t("no_profile")}</h3></div>
         ) : tab === "admin" ? (
           myRole === "admin" ? <AdminPanel /> : <div className="empty" style={{ padding: "72px 24px" }}><h3>—</h3></div>
         ) : null}
