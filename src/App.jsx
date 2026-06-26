@@ -168,6 +168,10 @@ const I18N = {
     err_taken: "Ten nick lub e-mail jest już zajęty.",
     nav_account: "Moje konto", account_title: "Moje konto",
     account_favs: "Ulubieni artyści", account_no_favs: "Nie masz jeszcze ulubionych artystów.",
+    acc_profile: "Dane konta", acc_email_title: "Zmiana e-maila", acc_new_email: "Nowy e-mail",
+    acc_email_saved: "Zapisano. Jeśli wymagane, potwierdź zmianę linkiem z e-maila.",
+    acc_pw_title: "Zmiana hasła", acc_pw_saved: "Hasło zostało zmienione.",
+    acc_current_email: "Obecny e-mail",
     edit_title: "Edytuj profil",
     edit_sub: "Zmień swoje dane i prace.", save: "Zapisz zmiany", saved: "Zapisano!",
     edit_photos: "Twoje prace", add_photos: "Dodaj zdjęcia", del: "Usuń",
@@ -271,6 +275,10 @@ const I18N = {
     err_taken: "This nickname or email is already taken.",
     nav_account: "My account", account_title: "My account",
     account_favs: "Favorite artists", account_no_favs: "No favorite artists yet.",
+    acc_profile: "Account details", acc_email_title: "Change email", acc_new_email: "New email",
+    acc_email_saved: "Saved. If required, confirm the change via the email link.",
+    acc_pw_title: "Change password", acc_pw_saved: "Password changed.",
+    acc_current_email: "Current email",
     edit_title: "Edit profile",
     edit_sub: "Update your details and work.", save: "Save changes", saved: "Saved!",
     edit_photos: "Your work", add_photos: "Add photos", del: "Delete",
@@ -2565,8 +2573,19 @@ function UserAccount({ session, artists, onArtist }) {
   const uid = session.user.id;
   const [name, setName] = useState("");
   const [favs, setFavs] = useState([]);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
+
+  const [newEmail, setNewEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailMsg, setEmailMsg] = useState("");
+
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwMsg, setPwMsg] = useState("");
+  const r = { len: pw.length >= 8, lower: /[a-z]/.test(pw), upper: /[A-Z]/.test(pw), special: /[^A-Za-z0-9]/.test(pw) };
+  const pwValid = r.len && r.lower && r.upper && r.special && pw === pw2;
 
   const load = async () => {
     const { data: p } = await supabase.from("profiles").select("display_name").eq("id", uid).single();
@@ -2578,9 +2597,23 @@ function UserAccount({ session, artists, onArtist }) {
   useEffect(() => { load(); }, [artists]);
 
   const saveName = async () => {
-    setBusy(true);
+    setNameBusy(true);
     await supabase.from("profiles").update({ display_name: name }).eq("id", uid);
-    setBusy(false); setSaved(true);
+    setNameBusy(false); setNameSaved(true);
+  };
+  const saveEmail = async () => {
+    setEmailBusy(true); setEmailMsg("");
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    setEmailBusy(false);
+    setEmailMsg(error ? error.message : t("acc_email_saved"));
+    if (!error) setNewEmail("");
+  };
+  const savePw = async () => {
+    setPwBusy(true); setPwMsg("");
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    setPwBusy(false);
+    if (error) setPwMsg(error.message);
+    else { setPwMsg(t("acc_pw_saved")); setPw(""); setPw2(""); }
   };
   const removeFav = async (id) => {
     await supabase.from("favorites").delete().eq("user_id", uid).eq("artist_id", id);
@@ -2592,18 +2625,70 @@ function UserAccount({ session, artists, onArtist }) {
       <h2 style={{ fontSize: 24, marginBottom: 4 }}>{t("account_title")}</h2>
       <p style={{ color: "#666", fontSize: 14, marginBottom: 24 }}>{session.user.email}</p>
 
+      {/* Dane konta */}
       <div className="reg-card">
+        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("acc_profile")}</h2>
         <div className="form-row">
           <label className="form-label">{t("l_displayname")}</label>
           <input className="form-input" value={name}
-            onChange={e => { setName(e.target.value); setSaved(false); }} />
+            onChange={e => { setName(e.target.value); setNameSaved(false); }} />
         </div>
         <div className="form-actions">
-          {saved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
-          <button className="btn btn-primary" disabled={busy} onClick={saveName}>{t("save")}</button>
+          {nameSaved && <span style={{ color: "#4ade80", fontSize: 13, alignSelf: "center" }}>{t("saved")}</span>}
+          <button className="btn btn-primary" disabled={nameBusy} onClick={saveName}>{t("save")}</button>
         </div>
       </div>
 
+      {/* Zmiana e-maila */}
+      <div className="reg-card" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("acc_email_title")}</h2>
+        <div className="form-row">
+          <label className="form-label">{t("acc_current_email")}</label>
+          <input className="form-input" value={session.user.email} disabled />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("acc_new_email")}</label>
+          <input className="form-input" type="email" value={newEmail}
+            onChange={e => { setNewEmail(e.target.value); setEmailMsg(""); }} placeholder={t("ph_email")} />
+        </div>
+        {emailMsg && <div className="form-note-ok">{emailMsg}</div>}
+        <div className="form-actions">
+          <button className="btn btn-primary" disabled={emailBusy || !/\S+@\S+\.\S+/.test(newEmail)}
+            onClick={saveEmail}>{t("save")}</button>
+        </div>
+      </div>
+
+      {/* Zmiana hasła */}
+      <div className="reg-card" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("acc_pw_title")}</h2>
+        <div className="form-row">
+          <label className="form-label">{t("new_password")}</label>
+          <ul className="pw-rules" style={{ marginTop: 0 }}>
+            <li className={r.len ? "ok" : ""}><span className="pw-dot" /> {t("pw_len")}</li>
+            <li className={r.lower ? "ok" : ""}><span className="pw-dot" /> {t("pw_lower")}</li>
+            <li className={r.upper ? "ok" : ""}><span className="pw-dot" /> {t("pw_upper")}</li>
+            <li className={r.special ? "ok" : ""}><span className="pw-dot" /> {t("pw_special")}</li>
+          </ul>
+          <input className="form-input" type="password" value={pw}
+            onChange={e => { setPw(e.target.value); setPwMsg(""); }} placeholder={t("ph_password")} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">{t("l_password2")}</label>
+          <input className="form-input" type="password" value={pw2}
+            onChange={e => setPw2(e.target.value)} placeholder={t("ph_password2")} />
+          {pw2.length > 0 && (
+            <div className={`pw-match ${pw === pw2 ? "ok" : "bad"}`}>
+              {pw === pw2 ? t("pw_match_ok") : t("pw_match_bad")}
+            </div>
+          )}
+        </div>
+        {pwMsg && <div className="form-note-ok">{pwMsg}</div>}
+        <div className="form-actions">
+          <button className="btn btn-primary" disabled={pwBusy || !pwValid} onClick={savePw}>{t("save")}</button>
+        </div>
+      </div>
+
+      {/* Ulubieni */}
       <div className="reg-card" style={{ marginTop: 20 }}>
         <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("account_favs")} ({favs.length})</h2>
         {favs.length === 0 ? <div className="muted">{t("account_no_favs")}</div> : (
@@ -2619,6 +2704,10 @@ function UserAccount({ session, artists, onArtist }) {
             ))}
           </div>
         )}
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 24 }}>
+        <button className="btn btn-ghost" onClick={() => supabase.auth.signOut()}>{t("logout")}</button>
       </div>
     </div>
   );
