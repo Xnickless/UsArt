@@ -10,7 +10,6 @@ const TATTOO_STYLES = [
 
 const OTHER_STYLES = {
   "Malarstwo": ["Akwarela", "Olej", "Akryl", "Gwasz", "Abstrakcja", "Realizm"],
-  "Ilustracja": ["Digital", "Komiks", "Botanika", "Portret", "Editorial"],
   "Fotografia": ["Portret", "Street", "Analog", "Krajobraz", "Architektura"],
   "Grafika": ["Logo & Branding", "Plakat", "Typografia", "3D", "Motion"],
 };
@@ -56,7 +55,7 @@ const ARTISTS = [
   },
   {
     id: 4, nick: "jakub.paints", name: "Jakub Wiśniewski", city: "Kraków",
-    categories: ["Malarstwo", "Ilustracja"], styles: ["Akwarela", "Olej", "Botanika"],
+    categories: ["Malarstwo"], styles: ["Akwarela", "Olej", "Realizm"],
     bio: "Malarz i ilustrator. Tworzę głównie akwarele i oleje inspirowane naturą i architekturą.",
     avatar: "https://i.pravatar.cc/150?img=52",
     instagram: "jakub.paints", email: "jakub@paints.pl",
@@ -68,7 +67,7 @@ const ARTISTS = [
   },
   {
     id: 5, nick: "piotr.design", name: "Piotr Adamski", city: "Warszawa",
-    categories: ["Grafika", "Ilustracja"], styles: ["Logo & Branding", "Plakat", "Digital"],
+    categories: ["Grafika"], styles: ["Logo & Branding", "Plakat", "Typografia"],
     bio: "Digital artist i grafik. Projekty dla marek, plakaty, komiks autorski.",
     avatar: "https://i.pravatar.cc/150?img=60",
     instagram: "piotr.design", email: "piotr@design.io",
@@ -133,7 +132,7 @@ const REGISTER_CITIES = [
   "Przemyśl", "Stalowa Wola", "Tomaszów Mazowiecki", "Sopot",
   "Zakopane", "Świnoujście",
 ];
-const ALL_CATEGORIES = ["Fotografia", "Grafika", "Ilustracja", "Malarstwo", "Tatuaż"];
+const ALL_CATEGORIES = ["Fotografia", "Grafika", "Malarstwo", "Tatuaż"];
 
 // Zamienia wiersz z bazy (artysta + prace) na kształt używany w aplikacji
 const fromDb = (a) => ({
@@ -401,7 +400,7 @@ const I18N = {
 };
 
 const CATEGORY_EN = {
-  "Tatuaż": "Tattoo", "Malarstwo": "Painting", "Ilustracja": "Illustration",
+  "Tatuaż": "Tattoo", "Malarstwo": "Painting",
   "Fotografia": "Photography", "Grafika": "Graphic Design",
 };
 const STYLE_EN = {
@@ -3000,8 +2999,8 @@ function TermsPage({ onBack }) {
 
       <h3>§1. Postanowienia ogólne</h3>
       <p>1. Regulamin określa zasady korzystania z serwisu internetowego UsArt, dostępnego pod adresem usart.pl („Serwis").</p>
-      <p>2. Operatorem Serwisu jest [NAZWA OPERATORA], [forma prawna / NIP], [adres], kontakt: [E-MAIL].</p>
-      <p>3. Serwis jest katalogiem artystów (m.in. tatuaż, malarstwo, fotografia, grafika, ilustracja) umożliwiającym prezentację profili i prac oraz kontakt między artystami a użytkownikami.</p>
+      <p>2. Operatorem Serwisu jest [NAZWA OPERATORA], [forma prawna / NIP], [adres], kontakt: kontakt@usart.pl.</p>
+      <p>3. Serwis jest katalogiem artystów (m.in. tatuaż, malarstwo, fotografia, grafika) umożliwiającym prezentację profili i prac oraz kontakt między artystami a użytkownikami.</p>
 
       <h3>§2. Definicje</h3>
       <p>Użytkownik – osoba korzystająca z Serwisu. Konto – konto zakładane w Serwisie (Użytkownika lub Artysty). Artysta – Użytkownik prezentujący w Serwisie swój profil i prace.</p>
@@ -3026,8 +3025,8 @@ function TermsPage({ onBack }) {
       <p>2. Operator dokłada starań o dostępność Serwisu, lecz nie gwarantuje jego nieprzerwanego działania.</p>
 
       <h3>§7. Reklamacje i rozwiązanie</h3>
-      <p>1. Reklamacje można składać na adres [E-MAIL]; będą rozpatrywane w terminie 14 dni.</p>
-      <p>2. Użytkownik może w każdej chwili zrezygnować i zażądać usunięcia konta, kontaktując się pod [E-MAIL].</p>
+      <p>1. Reklamacje można składać na adres kontakt@usart.pl; będą rozpatrywane w terminie 14 dni.</p>
+      <p>2. Użytkownik może w każdej chwili zrezygnować i zażądać usunięcia konta, kontaktując się pod kontakt@usart.pl.</p>
 
       <h3>§8. Postanowienia końcowe</h3>
       <p>1. Operator może zmienić Regulamin z ważnych przyczyn, informując Użytkowników. 2. W sprawach nieuregulowanych stosuje się prawo polskie.</p>
@@ -3046,7 +3045,7 @@ function PrivacyPage({ onBack }) {
       <p className="legal-date">Obowiązuje od: [DATA]</p>
 
       <h3>1. Administrator danych</h3>
-      <p>Administratorem danych osobowych jest [NAZWA OPERATORA], [adres], kontakt: [E-MAIL].</p>
+      <p>Administratorem danych osobowych jest [NAZWA OPERATORA], [adres], kontakt: kontakt@usart.pl.</p>
 
       <h3>2. Jakie dane przetwarzamy</h3>
       <p>Adres e-mail, hasło (w formie zaszyfrowanej), nazwę/nick, miasto, dane profilu artysty (opis, Instagram, zdjęcia prac), opcjonalnie adres i lokalizację studia oraz treści tworzone w Serwisie (oceny, komentarze, polubienia, ulubione).</p>
@@ -3067,7 +3066,7 @@ function PrivacyPage({ onBack }) {
       <p>Używamy plików cookie niezbędnych do działania Serwisu (logowanie, ustawienia języka). Nie używamy cookie marketingowych; w razie ich wprowadzenia zaktualizujemy Politykę i poprosimy o zgodę.</p>
 
       <h3>8. Kontakt</h3>
-      <p>W sprawach danych osobowych: [E-MAIL].</p>
+      <p>W sprawach danych osobowych: kontakt@usart.pl.</p>
 
       <p className="legal-note">Dokument jest wzorem — przed publikacją wymaga weryfikacji przez prawnika i uzupełnienia danych w nawiasach […].</p>
     </div>
