@@ -203,6 +203,12 @@ const I18N = {
     l_displayname: "Nazwa wyświetlana", signup_btn: "Utwórz konto",
     have_account: "Masz już konto? Zaloguj się", anon_user: "Użytkownik",
     pay_ok: "Płatność przyjęta — okres próbny aktywny! 🎉", pay_cancel: "Płatność anulowana.",
+    footer_terms: "Regulamin", footer_privacy: "Polityka prywatności", footer_contact: "Kontakt",
+    footer_rights: "Wszelkie prawa zastrzeżone.", terms_title: "Regulamin",
+    privacy_title: "Polityka prywatności",
+    cookie_text: "Używamy plików cookie niezbędnych do działania serwisu (logowanie, ustawienia). Korzystając z UsArt, akceptujesz Politykę prywatności.",
+    cookie_ok: "Rozumiem",
+    consent_text: "Akceptuję Regulamin i Politykę prywatności.",
     nav_admin: "Panel", admin_title: "Panel administratora",
     admin_reports: "Zgłoszenia", admin_no_reports: "Brak zgłoszeń.",
     admin_artists: "Artyści", admin_del_content: "Usuń treść", admin_dismiss: "Odrzuć",
@@ -258,7 +264,8 @@ const I18N = {
     pay_today: "Do zapłaty dziś",
     pay_note: "Dziś nie pobieramy żadnej opłaty. Po {m} miesiącach pobierzemy {amt}/mies., chyba że anulujesz wcześniej.",
     pay_stripe_note: "Dane karty podasz bezpiecznie na stronie Stripe. Dziś 0 zł — po {m} miesiącach {amt}/mies., anuluj kiedy chcesz.",
-    start_trial: "Rozpocznij {m} miesiące za darmo ✓",
+    start_trial: "Rozpocznij {m} miesiące za darmo ✓", publish: "Opublikuj profil ✓",
+    success_simple: "Twój profil jest gotowy i widoczny w katalogu.",
     success_title: "Profil gotowy!",
     success_sub: "Okres próbny aktywny — {m} miesiące za darmo, potem {amt}/mies.{studio}.",
     success_studio: " (studio, {n} artystów)",
@@ -322,6 +329,12 @@ const I18N = {
     l_displayname: "Display name", signup_btn: "Create account",
     have_account: "Already have an account? Log in", anon_user: "User",
     pay_ok: "Payment received — trial active! 🎉", pay_cancel: "Payment canceled.",
+    footer_terms: "Terms", footer_privacy: "Privacy policy", footer_contact: "Contact",
+    footer_rights: "All rights reserved.", terms_title: "Terms",
+    privacy_title: "Privacy policy",
+    cookie_text: "We use cookies necessary for the site to work (login, settings). By using UsArt you accept the Privacy Policy.",
+    cookie_ok: "Got it",
+    consent_text: "I accept the Terms and Privacy Policy.",
     nav_admin: "Admin", admin_title: "Admin panel",
     admin_reports: "Reports", admin_no_reports: "No reports.",
     admin_artists: "Artists", admin_del_content: "Delete content", admin_dismiss: "Dismiss",
@@ -377,7 +390,8 @@ const I18N = {
     pay_today: "Due today",
     pay_note: "No charge today. After {m} months we'll charge {amt}/mo unless you cancel earlier.",
     pay_stripe_note: "You'll enter card details securely on Stripe. 0 zł today — then {amt}/mo after {m} months, cancel anytime.",
-    start_trial: "Start {m} months free ✓",
+    start_trial: "Start {m} months free ✓", publish: "Publish profile ✓",
+    success_simple: "Your profile is ready and visible in the catalog.",
     success_title: "Profile ready!",
     success_sub: "Trial active — {m} months free, then {amt}/mo{studio}.",
     success_studio: " (studio, {n} artists)",
@@ -534,6 +548,33 @@ const css = `
     border-bottom: 1px solid #1a1a1a; font-size: 14px; color: #999; }
   .sub-row:last-of-type { border-bottom: none; }
   .sub-row b { color: #eee; font-weight: 600; text-align: right; }
+
+  /* ── STOPKA / PRAWNE / COOKIES ── */
+  .footer { border-top: 1px solid #1a1a1a; margin-top: 40px; padding: 24px 28px; }
+  .footer-inner { max-width: 1160px; margin: 0 auto; display: flex; align-items: center;
+    justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .footer-logo { font-size: 18px; font-weight: 700;
+    background: linear-gradient(135deg, #e879f9, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+  .footer-links button, .footer-links a { background: none; border: none; color: #888; cursor: pointer;
+    font-size: 13px; text-decoration: none; }
+  .footer-links button:hover, .footer-links a:hover { color: #ddd; }
+  .footer-copy { color: #555; font-size: 12px; }
+  .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; z-index: 350;
+    background: #141414; border-top: 1px solid #2a2a2a; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
+    font-size: 13px; color: #bbb; }
+  .cookie-link { background: none; border: none; color: #818cf8; cursor: pointer; text-decoration: underline; font: inherit; }
+  .legal { max-width: 800px; margin: 0 auto; padding: 32px 28px 60px; color: #c8ccd2; }
+  .legal h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .legal h3 { font-size: 15px; font-weight: 600; color: #eee; margin: 22px 0 8px; }
+  .legal p { font-size: 14px; line-height: 1.65; margin-bottom: 8px; }
+  .legal-date { color: #666; font-size: 13px; margin-bottom: 8px; }
+  .legal-note { margin-top: 26px; padding: 12px 14px; background: rgba(240,168,104,.08);
+    border: 1px solid rgba(240,168,104,.25); border-radius: 10px; color: #f0a868; font-size: 13px; }
+  .consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 8px; cursor: pointer;
+    font-size: 13px; color: #aaa; line-height: 1.5; }
+  .consent input { margin-top: 2px; width: 16px; height: 16px; flex-shrink: 0; accent-color: #818cf8; cursor: pointer; }
   .form-warning { font-size: 12px; color: #f0a868; margin-top: 18px; text-align: right; }
   .form-error { font-size: 13px; color: #f87171; margin-top: 14px; padding: 10px 12px;
     background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.25); border-radius: 10px; }
@@ -932,7 +973,7 @@ const css = `
 `;
 
 // ─── REGISTER FLOW ─────────────────────────────────────────────────────────────
-const STEPS = ["step_account", "step_profile", "step_photos", "step_payment"];
+const STEPS = ["step_account", "step_profile", "step_photos"];
 const TRIAL_MONTHS = 2;
 const BASE_PRICE = 49.99;     // pierwszy artysta
 const EXTRA_PRICE = 45.00;    // każdy kolejny artysta ze studia (5 zł taniej)
@@ -946,7 +987,7 @@ function RegisterFlow({ onBack, onDone }) {
     nick: "", name: "", email: "", password: "", password2: "", instagram: "", city: "",
     category: "", bio: "", styles: [], photos: [],
     cardName: "", cardNumber: "", cardExp: "", cardCvc: "",
-    plan: "solo", members: 3,
+    plan: "solo", members: 3, consent: false,
   });
   const [done, setDone] = useState(false);
 
@@ -960,7 +1001,7 @@ function RegisterFlow({ onBack, onDone }) {
   const pwMatch = form.password.length > 0 && form.password === form.password2;
 
   const stepValid = (s) => {
-    if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && pwMatch;
+    if (s === 0) return form.nick.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && pwMatch && form.consent;
     if (s === 1) return form.city.trim() && form.category && form.styles.length > 0;
     if (s === 2) return form.photos.length >= 2;
     if (s === 3) return true;
@@ -1028,15 +1069,7 @@ function RegisterFlow({ onBack, onDone }) {
         );
       }
 
-      // Krok 5 - Płatność: przekierowanie do Stripe Checkout (2 mies. za darmo)
-      const resp = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: form.plan, members: memberCount, email: form.email, artistId: uid, origin: window.location.origin }),
-      });
-      const data = await resp.json();
-      if (data.url) { window.location.href = data.url; return; }
-      throw new Error(data.error || "Płatność chwilowo niedostępna.");
+      setDone(true);
     } catch (e) {
       if (e.message === "no_session")
         setError("Wyłącz potwierdzanie e-mail w Supabase (Authentication → Sign In / Providers → Email).");
@@ -1054,11 +1087,7 @@ function RegisterFlow({ onBack, onDone }) {
         <div className="success-state">
           <div className="success-icon"><IconCheck /></div>
           <h2>{t("success_title")}</h2>
-          <p>{t("success_sub", {
-            m: TRIAL_MONTHS,
-            amt: zl(monthlyTotal),
-            studio: form.plan === "studio" ? t("success_studio", { n: memberCount }) : "",
-          })}<br />
+          <p>{t("success_simple")}<br />
           {t("success_line2")}</p>
           <div style={{ marginTop: 28, display: "flex", gap: 10, justifyContent: "center" }}>
             <button className="btn btn-ghost" onClick={onBack}>{t("go_home")}</button>
@@ -1138,6 +1167,10 @@ function RegisterFlow({ onBack, onDone }) {
               <input className="form-input" placeholder={t("ph_ig")} value={form.instagram}
                 onChange={e => update("instagram", e.target.value)} />
             </div>
+            <label className="consent">
+              <input type="checkbox" checked={form.consent} onChange={e => update("consent", e.target.checked)} />
+              <span>{t("consent_text")}</span>
+            </label>
           </>
         )}
 
@@ -1330,7 +1363,7 @@ function RegisterFlow({ onBack, onDone }) {
           ) : (
             <button className="btn btn-primary" disabled={!stepValid(step) || submitting}
               onClick={handleSubmit}>
-              {submitting ? t("submitting") : t("start_trial", { m: TRIAL_MONTHS })}
+              {submitting ? t("submitting") : t("publish")}
             </button>
           )}
         </div>
@@ -1342,7 +1375,7 @@ function RegisterFlow({ onBack, onDone }) {
 // ─── REJESTRACJA UŻYTKOWNIKA (darmowe konto) ────────────────────────────────────
 function UserSignup({ onBack, onDone }) {
   const { t } = useLang();
-  const [form, setForm] = useState({ displayName: "", email: "", password: "", password2: "" });
+  const [form, setForm] = useState({ displayName: "", email: "", password: "", password2: "", consent: false });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const u = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -1351,7 +1384,7 @@ function UserSignup({ onBack, onDone }) {
   const r = { len: pw.length >= 8, lower: /[a-z]/.test(pw), upper: /[A-Z]/.test(pw), special: /[^A-Za-z0-9]/.test(pw) };
   const pwValid = r.len && r.lower && r.upper && r.special;
   const match = pw.length > 0 && pw === form.password2;
-  const valid = form.displayName.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && match;
+  const valid = form.displayName.trim() && /\S+@\S+\.\S+/.test(form.email) && pwValid && match && form.consent;
 
   const submit = async () => {
     setBusy(true); setErr("");
@@ -1405,6 +1438,10 @@ function UserSignup({ onBack, onDone }) {
             </div>
           )}
         </div>
+        <label className="consent">
+          <input type="checkbox" checked={form.consent} onChange={e => u("consent", e.target.checked)} />
+          <span>{t("consent_text")}</span>
+        </label>
         {err && <div className="form-error">{err}</div>}
         <div className="form-actions">
           <button className="btn btn-primary" disabled={busy || !valid} onClick={submit}>
@@ -2223,6 +2260,7 @@ function LoginModal({ onClose }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [sent, setSent] = useState(false);
@@ -2279,8 +2317,12 @@ function LoginModal({ onClose }) {
               <input className="form-input" type="password" value={password}
                 onChange={e => setPassword(e.target.value)} placeholder={t("ph_password")} />
             </div>
+            <label className="consent">
+              <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} />
+              <span>{t("consent_text")}</span>
+            </label>
             {err && <div className="form-error">{err}</div>}
-            <button className="btn btn-primary" disabled={busy || !email || password.length < 6} onClick={signup}>
+            <button className="btn btn-primary" disabled={busy || !email || password.length < 6 || !consent} onClick={signup}>
               {busy ? "…" : t("signup_btn")}
             </button>
             <button className="link-btn" onClick={() => { setMode("login"); setErr(""); }}>
@@ -2641,35 +2683,6 @@ function EditProfile({ artist, onSaved }) {
       </div>
 
       <div className="reg-card" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("sub_title")}</h2>
-        {hasSub ? (
-          <>
-            <div className="sub-row"><span>{t("sub_plan")}</span><b>{planLabel}</b></div>
-            <div className="sub-row"><span>{t("sub_status")}</span><b>{statusLabel}</b></div>
-            {artist.sub_start && <div className="sub-row"><span>{t("sub_started")}</span><b>{fmtDate(artist.sub_start)}</b></div>}
-            {artist.sub_trial_end && new Date(artist.sub_trial_end) > new Date() &&
-              <div className="sub-row"><span>{t("sub_trial_until")}</span><b>{fmtDate(artist.sub_trial_end)}</b></div>}
-            {artist.sub_period_end &&
-              <div className="sub-row"><span>{artist.sub_cancel ? t("sub_ends") : t("sub_renews")}</span><b>{fmtDate(artist.sub_period_end)}</b></div>}
-            {artist.sub_cancel ? (
-              <div className="form-note-ok" style={{ marginTop: 12 }}>{t("sub_cancel_done")}</div>
-            ) : (
-              <div className="form-actions">
-                <button className="btn btn-danger" disabled={subBusy} onClick={cancelSub}>{t("sub_cancel")}</button>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="muted" style={{ marginBottom: 12 }}>{t("sub_status_none")}</div>
-            <div className="form-actions">
-              <button className="btn btn-primary" disabled={subBusy} onClick={startSub}>{t("sub_start_btn")}</button>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="reg-card" style={{ marginTop: 20 }}>
         <h2 style={{ fontSize: 16, marginBottom: 14 }}>{t("edit_photos")}</h2>
         <div className="proj-grid">
           {(artist.projects || []).map(p => (
@@ -2942,9 +2955,129 @@ function UserAccount({ session, artists, onArtist }) {
   );
 }
 
+// ─── STOPKA ─────────────────────────────────────────────────────────────────────
+function Footer({ onNav }) {
+  const { t } = useLang();
+  return (
+    <footer className="footer">
+      <div className="footer-inner">
+        <span className="footer-logo">UsArt</span>
+        <div className="footer-links">
+          <button onClick={() => onNav("terms")}>{t("footer_terms")}</button>
+          <button onClick={() => onNav("privacy")}>{t("footer_privacy")}</button>
+          <a href="mailto:kontakt@usart.pl">{t("footer_contact")}</a>
+        </div>
+        <span className="footer-copy">© {new Date().getFullYear()} UsArt · {t("footer_rights")}</span>
+      </div>
+    </footer>
+  );
+}
+
+// ─── BANER COOKIES ───────────────────────────────────────────────────────────────
+function CookieBanner({ onNav }) {
+  const { t } = useLang();
+  const [show, setShow] = useState(() => {
+    try { return !localStorage.getItem("usart_cookies"); } catch { return true; }
+  });
+  if (!show) return null;
+  const accept = () => { try { localStorage.setItem("usart_cookies", "1"); } catch {} setShow(false); };
+  return (
+    <div className="cookie-banner">
+      <span>{t("cookie_text")} <button className="cookie-link" onClick={() => onNav("privacy")}>{t("footer_privacy")}</button></span>
+      <button className="btn btn-primary" onClick={accept}>{t("cookie_ok")}</button>
+    </div>
+  );
+}
+
+// ─── STRONY PRAWNE ───────────────────────────────────────────────────────────────
+function TermsPage({ onBack }) {
+  const { t } = useLang();
+  return (
+    <div className="legal">
+      <button className="profile-back" onClick={onBack}><IconBack /> {t("back")}</button>
+      <h1>Regulamin serwisu UsArt</h1>
+      <p className="legal-date">Obowiązuje od: [DATA]</p>
+
+      <h3>§1. Postanowienia ogólne</h3>
+      <p>1. Regulamin określa zasady korzystania z serwisu internetowego UsArt, dostępnego pod adresem usart.pl („Serwis").</p>
+      <p>2. Operatorem Serwisu jest [NAZWA OPERATORA], [forma prawna / NIP], [adres], kontakt: [E-MAIL].</p>
+      <p>3. Serwis jest katalogiem artystów (m.in. tatuaż, malarstwo, fotografia, grafika, ilustracja) umożliwiającym prezentację profili i prac oraz kontakt między artystami a użytkownikami.</p>
+
+      <h3>§2. Definicje</h3>
+      <p>Użytkownik – osoba korzystająca z Serwisu. Konto – konto zakładane w Serwisie (Użytkownika lub Artysty). Artysta – Użytkownik prezentujący w Serwisie swój profil i prace.</p>
+
+      <h3>§3. Konta i rejestracja</h3>
+      <p>1. Serwis umożliwia założenie bezpłatnego konta Użytkownika (ocenianie, komentowanie, ulubione) oraz konta Artysty (profil z galerią prac).</p>
+      <p>2. Rejestracja wymaga podania adresu e-mail i hasła oraz akceptacji Regulaminu i Polityki prywatności.</p>
+      <p>3. Użytkownik zobowiązuje się podawać prawdziwe dane i nie udostępniać konta osobom trzecim.</p>
+
+      <h3>§4. Zasady korzystania i treści</h3>
+      <p>1. Zabronione jest zamieszczanie treści bezprawnych, obraźliwych lub naruszających prawa osób trzecich (w tym prawa autorskie) oraz dobre obyczaje.</p>
+      <p>2. Artysta oświadcza, że posiada prawa do zamieszczanych prac i zdjęć.</p>
+      <p>3. Operator może usuwać treści naruszające Regulamin i blokować konta. Użytkownik może zgłaszać naruszenia funkcją „Zgłoś".</p>
+
+      <h3>§5. Płatności</h3>
+      <p>1. Korzystanie z Serwisu jest bezpłatne do dnia 31 grudnia 2026 r.</p>
+      <p>2. Od dnia 1 stycznia 2027 r. prowadzenie konta Artysty może podlegać opłacie abonamentowej: 49,99 zł miesięcznie za konto solo oraz – w koncie studia – 49,99 zł za pierwszego artystę i 45,00 zł za każdego kolejnego.</p>
+      <p>3. O szczegółach i terminie wprowadzenia opłat Operator poinformuje z wyprzedzeniem. Konto Użytkownika pozostaje bezpłatne.</p>
+
+      <h3>§6. Odpowiedzialność</h3>
+      <p>1. Operator nie jest stroną kontaktów ani umów zawieranych między Artystami a Użytkownikami.</p>
+      <p>2. Operator dokłada starań o dostępność Serwisu, lecz nie gwarantuje jego nieprzerwanego działania.</p>
+
+      <h3>§7. Reklamacje i rozwiązanie</h3>
+      <p>1. Reklamacje można składać na adres [E-MAIL]; będą rozpatrywane w terminie 14 dni.</p>
+      <p>2. Użytkownik może w każdej chwili zrezygnować i zażądać usunięcia konta, kontaktując się pod [E-MAIL].</p>
+
+      <h3>§8. Postanowienia końcowe</h3>
+      <p>1. Operator może zmienić Regulamin z ważnych przyczyn, informując Użytkowników. 2. W sprawach nieuregulowanych stosuje się prawo polskie.</p>
+
+      <p className="legal-note">Dokument jest wzorem — przed publikacją wymaga weryfikacji przez prawnika i uzupełnienia danych w nawiasach […].</p>
+    </div>
+  );
+}
+
+function PrivacyPage({ onBack }) {
+  const { t } = useLang();
+  return (
+    <div className="legal">
+      <button className="profile-back" onClick={onBack}><IconBack /> {t("back")}</button>
+      <h1>Polityka prywatności UsArt</h1>
+      <p className="legal-date">Obowiązuje od: [DATA]</p>
+
+      <h3>1. Administrator danych</h3>
+      <p>Administratorem danych osobowych jest [NAZWA OPERATORA], [adres], kontakt: [E-MAIL].</p>
+
+      <h3>2. Jakie dane przetwarzamy</h3>
+      <p>Adres e-mail, hasło (w formie zaszyfrowanej), nazwę/nick, miasto, dane profilu artysty (opis, Instagram, zdjęcia prac), opcjonalnie adres i lokalizację studia oraz treści tworzone w Serwisie (oceny, komentarze, polubienia, ulubione).</p>
+
+      <h3>3. Cele i podstawy prawne (RODO art. 6)</h3>
+      <p>Świadczenie usługi i prowadzenie konta – art. 6 ust. 1 lit. b (wykonanie umowy). Kontakt i obsługa reklamacji – lit. f (uzasadniony interes). Rozliczenie płatności (po ich uruchomieniu) – lit. b i c.</p>
+
+      <h3>4. Odbiorcy danych</h3>
+      <p>Dostawcy usług przetwarzający dane w naszym imieniu: Supabase (baza danych i uwierzytelnianie), Vercel (hosting), a po uruchomieniu płatności – Stripe. Dane mogą być przetwarzane na serwerach w UE.</p>
+
+      <h3>5. Okres przechowywania</h3>
+      <p>Dane przechowujemy do czasu usunięcia konta lub ustania celu przetwarzania, a następnie przez okres wymagany przepisami (np. rozliczenia).</p>
+
+      <h3>6. Twoje prawa</h3>
+      <p>Masz prawo dostępu do danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia oraz wniesienia sprzeciwu, a także skargi do Prezesa Urzędu Ochrony Danych Osobowych (PUODO).</p>
+
+      <h3>7. Pliki cookie</h3>
+      <p>Używamy plików cookie niezbędnych do działania Serwisu (logowanie, ustawienia języka). Nie używamy cookie marketingowych; w razie ich wprowadzenia zaktualizujemy Politykę i poprosimy o zgodę.</p>
+
+      <h3>8. Kontakt</h3>
+      <p>W sprawach danych osobowych: [E-MAIL].</p>
+
+      <p className="legal-note">Dokument jest wzorem — przed publikacją wymaga weryfikacji przez prawnika i uzupełnienia danych w nawiasach […].</p>
+    </div>
+  );
+}
+
 // Ścieżki URL dla zakładek (profile artystów: /nick)
 const TAB_PATHS = { search: "/", favorites: "/ulubione", works: "/prace",
-  map: "/mapa", register: "/dolacz", account: "/konto", admin: "/admin" };
+  map: "/mapa", register: "/dolacz", account: "/konto", admin: "/admin",
+  terms: "/regulamin", privacy: "/polityka-prywatnosci" };
 const PATH_TABS = Object.fromEntries(Object.entries(TAB_PATHS).map(([t, p]) => [p, t]));
 
 // ─── ROOT APP ──────────────────────────────────────────────────────────────────
@@ -3175,10 +3308,17 @@ export default function App() {
               : <div className="empty" style={{ padding: "72px 24px" }}><h3>{t("no_profile")}</h3></div>
         ) : tab === "admin" ? (
           myRole === "admin" ? <AdminPanel /> : <div className="empty" style={{ padding: "72px 24px" }}><h3>—</h3></div>
+        ) : tab === "terms" ? (
+          <TermsPage onBack={() => window.history.back()} />
+        ) : tab === "privacy" ? (
+          <PrivacyPage onBack={() => window.history.back()} />
         ) : null}
+
+        <Footer onNav={(tb) => go({ tab: tb })} />
 
         {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
         {recovery && <ResetPasswordModal onClose={() => setRecovery(false)} />}
+        <CookieBanner onNav={(tb) => go({ tab: tb })} />
       </div>
     </LangContext.Provider>
   );
